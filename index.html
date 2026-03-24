@@ -18,11 +18,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .screen{display:none;flex:1;flex-direction:column;overflow-y:auto;padding-bottom:70px;}
 .screen.active{display:flex;}
 
+/* user selector */
+.user-selector{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;}
+.user-selector.show{display:flex;}
+.user-selector-modal{background:#fff;border-radius:20px;padding:30px;width:320px;text-align:center;}
+.user-selector-modal h2{font-size:18px;font-weight:600;color:var(--brown);margin-bottom:20px;}
+.user-buttons{display:flex;flex-direction:column;gap:12px;}
+.user-btn{padding:16px;border-radius:12px;border:2px solid var(--border);background:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;}
+.user-btn:hover{background:var(--bg2);border-color:var(--coral);}
+.user-btn.active{background:var(--coral);color:#fff;border-color:var(--coral);}
+
 /* header */
-.hdr-coral{background:var(--coral);padding:44px 18px 16px;flex-shrink:0;}
+.hdr-coral{background:var(--coral);padding:44px 18px 16px;flex-shrink:0;display:flex;justify-content:space-between;align-items:flex-start;}
+.hdr-left{flex:1;}
 .hdr-coral .brand{font-size:11px;color:rgba(255,255,255,.65);letter-spacing:.05em;}
 .hdr-coral .title{font-size:22px;font-weight:600;color:#fff;margin-top:4px;}
 .hdr-coral .sub{font-size:13px;color:rgba(255,255,255,.75);margin-top:2px;}
+.user-info{font-size:12px;color:rgba(255,255,255,.8);text-align:right;}
+.user-info .name{font-weight:600;font-size:14px;color:#fff;}
+.user-info .switch{font-size:11px;color:rgba(255,255,255,.7);cursor:pointer;margin-top:4px;}
+
 .hdr-white{background:var(--bg);padding:44px 18px 12px;border-bottom:.5px solid var(--border);flex-shrink:0;}
 .hdr-white .title{font-size:20px;font-weight:600;color:var(--brown);}
 
@@ -149,15 +164,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <body>
 <div class="phone" id="app">
 
+<!-- USER SELECTOR -->
+<div class="user-selector" id="user-selector">
+  <div class="user-selector-modal">
+    <h2>选择用户</h2>
+    <div class="user-buttons">
+      <button class="user-btn" onclick="selectUser('xiaoyuer')">🐠 小鱼儿</button>
+      <button class="user-btn" onclick="selectUser('xiaoxingxing')">⭐ 小星星</button>
+    </div>
+  </div>
+</div>
+
 <!-- SYNC STATUS -->
 <div class="sync-status" id="sync-status">📱 离线</div>
 
 <!-- HOME -->
 <div class="screen active" id="s-home">
   <div class="hdr-coral">
-    <div class="brand">小鱼健康</div>
-    <div class="title">首页</div>
-    <div class="sub">Hello，今天你变好了么？</div>
+    <div class="hdr-left">
+      <div class="brand">小鱼健康</div>
+      <div class="title">首页</div>
+      <div class="sub">Hello，今天你变好了么？</div>
+    </div>
+    <div class="user-info">
+      <div class="name" id="current-user">小鱼儿</div>
+      <div class="switch" onclick="showUserSelector()">切换用户</div>
+    </div>
   </div>
   <div class="week-strip" id="week-strip"></div>
   <div class="sbody">
@@ -230,22 +262,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="screen" id="s-settings">
   <div class="hdr-white"><div class="title">设置</div></div>
   <div class="sbody">
-    <div class="set-section">账号同步</div>
+    <div class="set-section">账号信息</div>
     <div class="set-group">
       <div class="set-parent">
         <div class="set-parent-label">
           <div style="width:8px;height:8px;border-radius:50%;background:var(--coral);"></div>
-          云端数据同步
-        </div>
-        <div>
-          <button class="ic-btn" onclick="toggleCloudSync()" id="sync-toggle">🔄</button>
+          当前用户
         </div>
       </div>
       <div class="set-child">
-        <span class="set-child-name" id="sync-info">未登录</span>
+        <span class="set-child-name" id="settings-user">小鱼儿</span>
+        <button class="ic-btn" onclick="showUserSelector()">切换</button>
       </div>
     </div>
-    <button class="add-btn" onclick="openLoginModal()">+ 登录账号</button>
+    <div class="set-group">
+      <div class="set-parent">
+        <div class="set-parent-label">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green);"></div>
+          云端同步
+        </div>
+      </div>
+      <div class="set-child">
+        <span class="set-child-name" id="sync-info">已启用</span>
+        <button class="ic-btn" onclick="syncNow()">🔄</button>
+      </div>
+    </div>
 
     <div class="set-section">健康记录项目</div>
     <div id="health-fields-settings"></div>
@@ -284,19 +325,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
-<!-- LOGIN MODAL -->
-<div class="modal-overlay" id="login-modal">
-  <div class="modal">
-    <h3>登录账号</h3>
-    <input type="text" id="login-email" placeholder="邮箱">
-    <input type="password" id="login-password" placeholder="密码">
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeLoginModal()">取消</button>
-      <button class="btn-confirm" onclick="confirmLogin()">登录</button>
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 </div>
 
@@ -307,8 +335,12 @@ const S_COLORS=['#2E7D52','#E67E00','#CC5500','#C0392B'];
 
 // JSONBin 配置
 const JSONBIN_API = 'https://api.jsonbin.io/v3';
-let userAccount = null;
-let syncEnabled = false;
+const USERS = {
+  'xiaoyuer': { name: '小鱼儿', emoji: '🐠' },
+  'xiaoxingxing': { name: '小星星', emoji: '⭐' }
+};
+
+let currentUser = null;
 
 let state={
   currentWeek:4,
@@ -348,20 +380,56 @@ function rec(){
   return state.records[k];
 }
 
+// 用户管理
+function showUserSelector(){
+  document.getElementById('user-selector').classList.add('show');
+}
+
+function selectUser(userId){
+  currentUser = userId;
+  localStorage.setItem('harmony_current_user', userId);
+  document.getElementById('user-selector').classList.remove('show');
+  
+  // 更新 UI
+  const userName = USERS[userId].name;
+  document.getElementById('current-user').textContent = userName;
+  document.getElementById('settings-user').textContent = userName;
+  
+  // 加载用户数据
+  loadUserData();
+  showToast(`✓ 已切换到 ${userName}`);
+}
+
+function loadUserData(){
+  const key = `harmony_data_${currentUser}`;
+  const saved = localStorage.getItem(key);
+  if(saved) {
+    const data = JSON.parse(saved);
+    state = data;
+  }
+  loadHomeData();
+}
+
+function saveUserData(){
+  const key = `harmony_data_${currentUser}`;
+  localStorage.setItem(key, JSON.stringify(state));
+}
+
 // 云端同步函数
 async function syncToCloud(){
-  if(!userAccount || !syncEnabled) return;
+  if(!currentUser) return;
   
-  updateSyncStatus('syncing', '同步中...');
+  updateSyncStatus('syncing', '🔄 同步中...');
   try {
     const response = await fetch(`${JSONBIN_API}/b`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Master-Key': '$2b$10$' + btoa(userAccount.email).slice(0, 20)
+        'X-Master-Key': '$2b$10$' + btoa(`harmony_${currentUser}`).slice(0, 20)
       },
       body: JSON.stringify({
-        user: userAccount.email,
+        user: currentUser,
+        userName: USERS[currentUser].name,
         data: state,
         timestamp: new Date().toISOString()
       })
@@ -378,12 +446,12 @@ async function syncToCloud(){
 }
 
 async function syncFromCloud(){
-  if(!userAccount) return;
+  if(!currentUser) return;
   
   try {
     const response = await fetch(`${JSONBIN_API}/b`, {
       headers: {
-        'X-Master-Key': '$2b$10$' + btoa(userAccount.email).slice(0, 20)
+        'X-Master-Key': '$2b$10$' + btoa(`harmony_${currentUser}`).slice(0, 20)
       }
     });
     
@@ -391,6 +459,7 @@ async function syncFromCloud(){
       const data = await response.json();
       if(data.record && data.record.data) {
         state = data.record.data;
+        saveUserData();
         loadHomeData();
         showToast('✓ 数据已同步');
       }
@@ -406,61 +475,8 @@ function updateSyncStatus(status, text){
   el.className = 'sync-status ' + status;
 }
 
-function openLoginModal(){
-  document.getElementById('login-modal').classList.add('open');
-}
-
-function closeLoginModal(){
-  document.getElementById('login-modal').classList.remove('open');
-}
-
-function confirmLogin(){
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value.trim();
-  
-  if(!email || !password) {
-    showToast('请输入邮箱和密码');
-    return;
-  }
-  
-  userAccount = {email, password};
-  syncEnabled = true;
-  
-  localStorage.setItem('harmony_account', JSON.stringify(userAccount));
-  localStorage.setItem('harmony_sync_enabled', 'true');
-  
-  document.getElementById('sync-info').textContent = '已登录: ' + email;
-  closeLoginModal();
-  showToast('✓ 登录成功');
-  
+function syncNow(){
   syncToCloud();
-}
-
-function toggleCloudSync(){
-  if(!userAccount) {
-    showToast('请先登录账号');
-    return;
-  }
-  
-  syncEnabled = !syncEnabled;
-  localStorage.setItem('harmony_sync_enabled', syncEnabled ? 'true' : 'false');
-  
-  if(syncEnabled) {
-    syncToCloud();
-  }
-}
-
-// 初始化账号
-function initAccount(){
-  const saved = localStorage.getItem('harmony_account');
-  if(saved) {
-    userAccount = JSON.parse(saved);
-    syncEnabled = localStorage.getItem('harmony_sync_enabled') === 'true';
-    document.getElementById('sync-info').textContent = '已登录: ' + userAccount.email;
-    if(syncEnabled) {
-      syncFromCloud();
-    }
-  }
 }
 
 // WEEKS
@@ -506,6 +522,7 @@ function calcBMI(){
   let r=rec();
   r.weight=wEl.value;
   r.height=hEl.value;
+  saveUserData();
   let valEl=document.getElementById('bmi-val');
   let tagEl=document.getElementById('bmi-tag');
   let barEl=document.getElementById('bmi-bar');
@@ -575,6 +592,7 @@ function toggleCard(el){
 function setHealth(fid,val){
   let r=rec();
   r.health[fid]=(r.health[fid]===val)?0:val;
+  saveUserData();
   renderHealthCards();
 }
 
@@ -599,17 +617,15 @@ function renderHabitCard(){
 function setHabit(hid,val){
   let r=rec();
   r.habits[hid]=(r.habits[hid]===val)?0:val;
+  saveUserData();
   renderHabitCard();
 }
 
 function saveWeek(){
   rec().note=document.getElementById('week-note').value;
+  saveUserData();
   showToast('本周记录已保存 ✓');
-  
-  // 自动同步到云端
-  if(syncEnabled) {
-    syncToCloud();
-  }
+  syncToCloud();
 }
 
 // NAV
@@ -789,6 +805,7 @@ function confirmModal(){
     let h=state.habits.find(h=>h.id===_mFid);if(h)h.name=val;
   }
   closeModal();
+  saveUserData();
   renderSettings();
   renderHealthCards();
   renderHabitCard();
@@ -796,15 +813,18 @@ function confirmModal(){
 }
 function deleteCat(id){
   state.categories=state.categories.filter(c=>c.id!==id);
+  saveUserData();
   renderSettings();renderHealthCards();showToast('已删除');
 }
 function deleteField(cid,fid){
   let cat=state.categories.find(c=>c.id===cid);
   if(cat)cat.fields=cat.fields.filter(f=>f.id!==fid);
+  saveUserData();
   renderSettings();renderHealthCards();showToast('已删除');
 }
 function deleteHabit(id){
   state.habits=state.habits.filter(h=>h.id!==id);
+  saveUserData();
   renderSettings();renderHabitCard();showToast('已删除');
 }
 
@@ -815,18 +835,27 @@ function showToast(msg){
 }
 
 // INIT
-buildWeeks();
-renderWeekStrip();
-updateMonthLabel();
-loadHomeData();
-initAccount();
-
-// 定时自动同步
-setInterval(() => {
-  if(syncEnabled && userAccount) {
-    syncToCloud();
+function init(){
+  const saved = localStorage.getItem('harmony_current_user');
+  if(saved && USERS[saved]) {
+    selectUser(saved);
+  } else {
+    showUserSelector();
   }
-}, 300000); // 每 5 分钟同步一次
+  
+  buildWeeks();
+  renderWeekStrip();
+  updateMonthLabel();
+  
+  // 定时自动同步
+  setInterval(() => {
+    if(currentUser) {
+      syncToCloud();
+    }
+  }, 300000); // 每 5 分钟同步一次
+}
+
+init();
 </script>
 </body>
 </html>
