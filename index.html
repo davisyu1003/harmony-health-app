@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小鱼健康</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --coral:#C8694A;--coral-light:#F5EDE6;
+  --brown:#5C3420;--brown-mid:#8B5C40;--brown-light:#C4A090;
+  --border:#EDD5C0;--bg:#FDFAF7;--bg2:#F5EDE6;
+  --green:#2E7D52;--red:#C0392B;--amber:#BA7517;--blue:#185FA5;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#EDE5D8;min-height:100vh;display:flex;justify-content:center;padding:16px 0 40px;}
+.phone{width:390px;background:var(--bg);border-radius:40px;border:2px solid #D4C4B4;overflow:hidden;display:flex;flex-direction:column;min-height:780px;}
+.screen{display:none;flex:1;flex-direction:column;overflow-y:auto;}
+.screen.active{display:flex;}
+
+/* header */
+.hdr-coral{background:var(--coral);padding:44px 18px 16px;flex-shrink:0;}
+.hdr-coral .brand{font-size:11px;color:rgba(255,255,255,.65);letter-spacing:.05em;}
+.hdr-coral .title{font-size:22px;font-weight:600;color:#fff;margin-top:4px;}
+.hdr-coral .sub{font-size:13px;color:rgba(255,255,255,.75);margin-top:2px;}
+.hdr-white{background:var(--bg);padding:44px 18px 12px;border-bottom:.5px solid var(--border);flex-shrink:0;}
+.hdr-white .title{font-size:20px;font-weight:600;color:var(--brown);}
+
+/* week strip */
+.week-strip{display:flex;gap:4px;padding:10px 16px;background:var(--bg2);overflow-x:auto;flex-shrink:0;}
+.week-strip::-webkit-scrollbar{display:none;}
+.wtab{font-size:11px;color:var(--brown-mid);padding:5px 12px;border-radius:16px;cursor:pointer;white-space:nowrap;border:none;background:transparent;}
+.wtab.on{background:var(--coral);color:#fff;font-weight:600;}
+
+/* body */
+.sbody{padding:14px 16px 20px;}
+.sec-label{font-size:10px;font-weight:600;color:var(--coral);letter-spacing:.06em;text-transform:uppercase;margin:14px 0 8px;}
+.sec-label:first-child{margin-top:0;}
+
+/* cards */
+.card{background:#fff;border-radius:14px;border:.5px solid var(--border);margin-bottom:10px;overflow:hidden;}
+.card-hdr{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;}
+.card-hdr-title{font-size:13px;font-weight:600;color:var(--brown);}
+.card-body{padding:0 14px 10px;}
+.chevron{font-size:14px;color:var(--brown-light);cursor:pointer;transition:transform .2s;display:inline-block;}
+.chevron.open{transform:rotate(180deg);}
+
+/* health sub rows */
+.sub-row{border-top:.5px solid var(--bg2);padding:8px 0;}
+.sub-name{font-size:12px;font-weight:600;color:var(--brown-mid);margin-bottom:8px;}
+.pills-row{display:flex;gap:4px;}
+.pill-item{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;cursor:pointer;}
+.np{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--brown-light);background:#fff;transition:all .15s;flex-shrink:0;}
+.np.a1{background:var(--green);border-color:var(--green);color:#fff;}
+.np.a2{background:#E67E00;border-color:#E67E00;color:#fff;}
+.np.a3{background:#CC5500;border-color:#CC5500;color:#fff;}
+.np.a4{background:var(--red);border-color:var(--red);color:#fff;}
+.pill-label{font-size:10px;white-space:nowrap;color:var(--brown-light);}
+.pill-label.a1{color:var(--green);font-weight:600;}
+.pill-label.a2{color:#E67E00;font-weight:600;}
+.pill-label.a3{color:#CC5500;font-weight:600;}
+.pill-label.a4{color:var(--red);font-weight:600;}
+
+/* habit */
+.habit-row{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-top:.5px solid var(--bg2);}
+.habit-row:first-child{border-top:none;}
+.habit-name{font-size:12px;color:var(--brown-mid);}
+.hbtns{display:flex;gap:6px;}
+.hbtn{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;background:#fff;transition:all .15s;}
+.hbtn.yes{background:var(--green);border-color:var(--green);}
+.hbtn.no{background:var(--red);border-color:var(--red);}
+
+/* bmi */
+.bmi-card{background:#fff;border-radius:14px;border:.5px solid var(--border);margin-bottom:10px;padding:14px;}
+.bmi-inputs{display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;}
+.bmi-field{flex:1;}
+.bmi-field label{display:block;font-size:10px;font-weight:600;color:var(--brown-light);letter-spacing:.04em;margin-bottom:5px;}
+.bmi-field input{width:100%;background:var(--bg2);border:.5px solid var(--border);border-radius:8px;padding:9px 10px;font-size:15px;font-weight:600;color:var(--brown);text-align:center;font-family:inherit;}
+.bmi-right{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:56px;}
+.bmi-num{font-size:22px;font-weight:700;color:var(--brown);line-height:1;}
+.bmi-tag{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+.bmi-bar-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.bmi-bar-fill{height:100%;border-radius:3px;width:0%;transition:width .4s,background .3s;}
+.bmi-bar-labels{display:flex;justify-content:space-between;margin-top:4px;}
+.bmi-bar-labels span{font-size:9px;color:var(--brown-light);}
+
+/* note */
+.note-wrap{background:#fff;border-radius:10px;border:.5px dashed var(--border);padding:12px;margin-bottom:10px;}
+.note-wrap textarea{width:100%;border:none;background:transparent;resize:none;font-size:13px;color:var(--brown-mid);outline:none;font-family:inherit;}
+.save-btn{width:100%;background:var(--coral);border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;}
+
+/* data */
+.top-tabs{display:flex;margin:0 16px;background:var(--bg2);border-radius:20px;padding:3px;}
+.ttab{flex:1;text-align:center;font-size:12px;padding:6px 0;border-radius:16px;color:var(--brown-mid);cursor:pointer;font-weight:500;border:none;background:transparent;}
+.ttab.on{background:#fff;color:var(--brown);font-weight:600;}
+.month-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:.5px solid var(--border);}
+.month-nav span{font-size:13px;font-weight:600;color:var(--brown);}
+.month-nav button{background:none;border:none;color:var(--coral);font-size:20px;cursor:pointer;padding:0 4px;}
+.chart-card{background:#fff;border-radius:14px;border:.5px solid var(--border);padding:14px;margin-bottom:10px;}
+.chart-title{font-size:13px;font-weight:600;color:var(--brown);margin-bottom:2px;}
+.chart-sub{font-size:10px;color:var(--brown-light);margin-bottom:10px;}
+.chart-legend{display:flex;gap:12px;margin-top:8px;}
+.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--brown-mid);}
+.leg-dot{width:8px;height:8px;border-radius:50%;}
+.rings-row{display:flex;justify-content:space-around;align-items:center;padding:4px 0;}
+.ring-item{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.ring-item span{font-size:11px;color:var(--brown-mid);text-align:center;max-width:64px;line-height:1.3;}
+
+/* settings */
+.set-section{font-size:11px;font-weight:600;color:var(--coral);letter-spacing:.05em;margin:14px 0 8px;}
+.set-group{background:#fff;border-radius:14px;border:.5px solid var(--border);margin-bottom:8px;overflow:hidden;}
+.set-parent{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;}
+.set-parent-label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--brown);}
+.cat-dot{width:8px;height:8px;border-radius:50%;}
+.set-child{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 8px 30px;border-top:.5px solid var(--bg2);}
+.set-child-name{font-size:12px;color:var(--brown-mid);}
+.ic-btn{background:none;border:none;color:var(--brown-light);font-size:14px;cursor:pointer;padding:0 4px;}
+.add-btn{width:100%;background:var(--bg2);border:.5px dashed var(--border);border-radius:10px;padding:10px;font-size:12px;font-weight:600;color:var(--brown-mid);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;}
+
+/* bottom nav */
+.bottom-nav{display:flex;background:var(--bg);border-top:.5px solid var(--border);flex-shrink:0;}
+.bnav{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 10px;cursor:pointer;border:none;background:none;}
+.bnav svg{width:22px;height:22px;}
+.bnav span{font-size:10px;color:var(--brown-light);}
+.bnav.on span{color:var(--coral);}
+
+/* modal */
+.modal-overlay{display:none;position:absolute;inset:0;background:rgba(60,30,10,.45);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:20px;padding:20px;width:300px;}
+.modal h3{font-size:15px;font-weight:600;color:var(--brown);margin-bottom:16px;}
+.modal input{width:100%;background:var(--bg2);border:.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--brown);margin-bottom:10px;font-family:inherit;}
+.modal-btns{display:flex;gap:8px;}
+.modal-btns button{flex:1;padding:10px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-cancel{background:var(--bg2);color:var(--brown-mid);}
+.btn-confirm{background:var(--coral);color:#fff;}
+
+/* toast */
+.toast{display:none;position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(60,30,10,.88);color:#fff;font-size:12px;padding:8px 18px;border-radius:20px;z-index:200;white-space:nowrap;}
+.toast.show{display:block;}
+</style>
+</head>
+<body>
+<div class="phone" id="app">
+
+<!-- HOME -->
+<div class="screen active" id="s-home">
+  <div class="hdr-coral">
+    <div class="brand">小鱼健康</div>
+    <div class="title">首页</div>
+    <div class="sub">Hello，今天你变好了么？</div>
+  </div>
+  <div class="week-strip" id="week-strip"></div>
+  <div class="sbody">
+    <div class="sec-label">体重 · BMI</div>
+    <div class="bmi-card">
+      <div class="bmi-inputs">
+        <div class="bmi-field">
+          <label>体重 KG</label>
+          <input type="number" id="inp-weight" placeholder="65.0" step="0.1" oninput="calcBMI()">
+        </div>
+        <div class="bmi-field">
+          <label>身高 CM</label>
+          <input type="number" id="inp-height" placeholder="170" step="1" oninput="calcBMI()">
+        </div>
+        <div class="bmi-right">
+          <div class="bmi-num" id="bmi-val">--</div>
+          <div class="bmi-tag" id="bmi-tag" style="background:transparent;color:transparent;">-</div>
+        </div>
+      </div>
+      <div class="bmi-bar-track"><div class="bmi-bar-fill" id="bmi-bar"></div></div>
+      <div class="bmi-bar-labels">
+        <span>偏轻 &lt;18.5</span><span>正常 18.5–24</span><span>偏重 24–28</span><span>肥胖 &gt;28</span>
+      </div>
+    </div>
+
+    <div class="sec-label">周健康状态</div>
+    <div id="health-cards"></div>
+
+    <div class="sec-label">养生计划打卡</div>
+    <div class="card" id="habit-card"></div>
+
+    <div class="sec-label">本周备注</div>
+    <div class="note-wrap"><textarea id="week-note" rows="3" placeholder="记录本周身体感受…"></textarea></div>
+    <button class="save-btn" onclick="saveWeek()">保存本周记录</button>
+  </div>
+</div>
+
+<!-- DATA -->
+<div class="screen" id="s-data">
+  <div class="hdr-white"><div class="title">数据中心</div>
+    <div style="margin-top:10px;"><div class="top-tabs">
+      <button class="ttab on" onclick="switchDataTab('month',this)">本月</button>
+      <button class="ttab" onclick="switchDataTab('year',this)">本年</button>
+    </div></div>
+  </div>
+  <div class="month-nav">
+    <button onclick="changeMonth(-1)">&#8249;</button>
+    <span id="month-label"></span>
+    <button onclick="changeMonth(1)">&#8250;</button>
+  </div>
+  <div class="sbody">
+    <div class="sec-label">BMI 趋势</div>
+    <div class="chart-card">
+      <div class="chart-title">体重指数 · BMI</div>
+      <div class="chart-sub">18.5–24 为正常区间</div>
+      <div style="height:120px;"><canvas id="bmi-chart"></canvas></div>
+    </div>
+    <div class="sec-label">健康趋势</div>
+    <div id="health-charts"></div>
+    <div class="sec-label">习惯达成率</div>
+    <div class="chart-card">
+      <div class="chart-title">本月养生计划完成情况</div>
+      <div class="chart-sub">完成次数 / 本月总周次</div>
+      <div class="rings-row" id="habit-rings"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="screen" id="s-settings">
+  <div class="hdr-white"><div class="title">设置</div></div>
+  <div class="sbody">
+    <div class="set-section">健康记录项目</div>
+    <div id="health-fields-settings"></div>
+    <button class="add-btn" onclick="openModal('新增一级分类','addCat')">+ 新增一级分类</button>
+    <div class="set-section">养生计划</div>
+    <div class="set-group" id="habit-settings"></div>
+    <button class="add-btn" onclick="openModal('新增养生计划','addHabit')">+ 新增养生计划</button>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="bottom-nav">
+  <button class="bnav on" id="nav-home" onclick="navTo('home')">
+    <svg viewBox="0 0 22 22" fill="none"><path d="M4 10L11 4l7 6v8h-5v-5H9v5H4v-8z" stroke="var(--coral)" stroke-width="1.4"/></svg>
+    <span>首页</span>
+  </button>
+  <button class="bnav" id="nav-data" onclick="navTo('data')">
+    <svg viewBox="0 0 22 22" fill="none"><polyline points="3,17 7,11 12,14 18,5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    <span>数据</span>
+  </button>
+  <button class="bnav" id="nav-settings" onclick="navTo('settings')">
+    <svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="9" r="3.5" stroke="currentColor" stroke-width="1.3"/><path d="M4 19c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    <span>设置</span>
+  </button>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <input type="text" id="modal-input" placeholder="请输入名称">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn-confirm" onclick="confirmModal()">确定</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+</div>
+
+<script>
+const CAT_COLORS={'精力与睡眠':'#1D9E75','神经与情绪':'#7F77DD','消化与代谢':'#BA7517','骨骼与肌肉':'#D4537E'};
+const S_LABELS=['完全恢复','轻微不适','不适加重','问题严重'];
+const S_COLORS=['#2E7D52','#E67E00','#CC5500','#C0392B'];
+
+let state={
+  currentWeek:4,
+  weeks:[],
+  categories:[
+    {id:'c1',name:'精力与睡眠',fields:[
+      {id:'f1',name:'起床/午睡困难'},{id:'f2',name:'头脑昏沉'},
+      {id:'f3',name:'午后困顿'},{id:'f4',name:'入睡困难'},{id:'f5',name:'夜晚盗汗'}
+    ]},
+    {id:'c2',name:'神经与情绪',fields:[
+      {id:'f6',name:'易怒/急躁'},{id:'f7',name:'耳鸣'},
+      {id:'f8',name:'心脏悸动'},{id:'f9',name:'记忆力减退'}
+    ]},
+    {id:'c3',name:'消化与代谢',fields:[
+      {id:'f10',name:'肚子胀气'},{id:'f11',name:'运动/讲话出汗'},{id:'f12',name:'吃饭后暴汗'}
+    ]},
+    {id:'c4',name:'骨骼与肌肉',fields:[
+      {id:'f13',name:'膝软'},{id:'f14',name:'腰痛'}
+    ]}
+  ],
+  habits:[
+    {id:'h1',name:'每日冥想 10 分钟'},
+    {id:'h2',name:'戒含糖饮料'},
+    {id:'h3',name:'睡前拉伸 15 分钟'}
+  ],
+  records:{},
+  modalAction:null,
+  modalTarget:null,
+  dataMonth:{y:new Date().getFullYear(),m:new Date().getMonth()+1},
+  bmiChart:null,
+  healthCharts:[]
+};
+
+function rec(){
+  let k='w'+state.currentWeek;
+  if(!state.records[k])state.records[k]={health:{},habits:{},note:'',weight:'',height:''};
+  return state.records[k];
+}
+
+// WEEKS
+function buildWeeks(){
+  let d=new Date(),base=new Date(d);
+  base.setDate(base.getDate()-base.getDay()+1);
+  for(let i=4;i>=0;i--){
+    let s=new Date(base);s.setDate(s.getDate()-7*i);
+    let e=new Date(s);e.setDate(e.getDate()+6);
+    let fmt=n=>n.toString().padStart(2,'0');
+    state.weeks.push(`W${5-i} ${fmt(s.getMonth()+1)}/${fmt(s.getDate())}–${fmt(e.getDate())}`);
+  }
+}
+
+function renderWeekStrip(){
+  document.getElementById('week-strip').innerHTML=
+    state.weeks.map((w,i)=>`<button class="wtab${i===state.currentWeek?' on':''}" onclick="selectWeek(${i})">${w}</button>`).join('');
+}
+
+function selectWeek(i){
+  state.currentWeek=i;
+  renderWeekStrip();
+  loadHomeData();
+}
+
+// HOME
+function loadHomeData(){
+  let r=rec();
+  document.getElementById('inp-weight').value=r.weight;
+  document.getElementById('inp-height').value=r.height;
+  document.getElementById('week-note').value=r.note;
+  calcBMI();
+  renderHealthCards();
+  renderHabitCard();
+}
+
+function calcBMI(){
+  let wEl=document.getElementById('inp-weight');
+  let hEl=document.getElementById('inp-height');
+  if(!wEl||!hEl)return;
+  let w=parseFloat(wEl.value);
+  let h=parseFloat(hEl.value);
+  let r=rec();
+  r.weight=wEl.value;
+  r.height=hEl.value;
+  let valEl=document.getElementById('bmi-val');
+  let tagEl=document.getElementById('bmi-tag');
+  let barEl=document.getElementById('bmi-bar');
+  if(!valEl||!tagEl||!barEl)return;
+  if(!w||!h||h<50||w<10){
+    valEl.textContent='--';
+    tagEl.textContent='-';
+    tagEl.style.background='transparent';
+    tagEl.style.color='transparent';
+    barEl.style.width='0%';
+    return;
+  }
+  let bmi=w/((h/100)**2);
+  valEl.textContent=bmi.toFixed(1);
+  let pct=Math.min(96,Math.max(2,(bmi-14)/22*100));
+  barEl.style.width=pct+'%';
+  let cfg;
+  if(bmi<18.5)    cfg={bar:'#378ADD',bg:'#E6F1FB',fg:'#185FA5',txt:'偏轻'};
+  else if(bmi<24) cfg={bar:'#2E7D52',bg:'#E4F4EB',fg:'#2E7D52',txt:'正常'};
+  else if(bmi<28) cfg={bar:'#BA7517',bg:'#FFF3DC',fg:'#8B5D00',txt:'偏重'};
+  else            cfg={bar:'#C0392B',bg:'#FDEAEA',fg:'#C0392B',txt:'肥胖'};
+  barEl.style.background=cfg.bar;
+  tagEl.textContent=cfg.txt;
+  tagEl.style.background=cfg.bg;
+  tagEl.style.color=cfg.fg;
+}
+
+function renderHealthCards(){
+  let r=rec();
+  let c=document.getElementById('health-cards');
+  c.innerHTML='';
+  state.categories.forEach(cat=>{
+    let color=CAT_COLORS[cat.name]||'var(--coral)';
+    let fieldsHtml=cat.fields.map(f=>{
+      let v=r.health[f.id]||0;
+      let pills=[0,1,2,3].map(i=>{
+        let n=i+1;
+        let ac=v===n;
+        return `<div class="pill-item" onclick="setHealth('${f.id}',${n})">
+          <div class="np${ac?' a'+n:''}">${n}</div>
+          <span class="pill-label${ac?' a'+n:''}">${S_LABELS[i]}</span>
+        </div>`;
+      }).join('');
+      return `<div class="sub-row">
+        <div class="sub-name">${f.name}</div>
+        <div class="pills-row">${pills}</div>
+      </div>`;
+    }).join('');
+    let div=document.createElement('div');
+    div.className='card';
+    div.innerHTML=`<div class="card-hdr">
+      <div class="card-hdr-title">${cat.name}</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${color};"></div>
+        <span class="chevron open" onclick="toggleCard(this)">&#8964;</span>
+      </div>
+    </div><div class="card-body">${fieldsHtml}</div>`;
+    c.appendChild(div);
+  });
+}
+
+function toggleCard(el){
+  el.classList.toggle('open');
+  el.closest('.card').querySelector('.card-body').style.display=el.classList.contains('open')?'':'none';
+}
+
+function setHealth(fid,val){
+  let r=rec();
+  r.health[fid]=(r.health[fid]===val)?0:val;
+  renderHealthCards();
+}
+
+function renderHabitCard(){
+  let r=rec();
+  document.getElementById('habit-card').innerHTML=state.habits.map(h=>{
+    let v=r.habits[h.id]||0;
+    return `<div class="habit-row">
+      <span class="habit-name">${h.name}</span>
+      <div class="hbtns">
+        <div class="hbtn${v===1?' yes':''}" onclick="setHabit('${h.id}',1)">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-6" stroke="${v===1?'#fff':'#C4A090'}" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="hbtn${v===2?' no':''}" onclick="setHabit('${h.id}',2)">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="${v===2?'#fff':'#C4A090'}" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setHabit(hid,val){
+  let r=rec();
+  r.habits[hid]=(r.habits[hid]===val)?0:val;
+  renderHabitCard();
+}
+
+function saveWeek(){
+  rec().note=document.getElementById('week-note').value;
+  showToast('本周记录已保存 ✓');
+}
+
+// NAV
+function navTo(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.bnav').forEach(b=>b.classList.remove('on'));
+  document.getElementById('s-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('on');
+  if(name==='data')renderDataScreen();
+  if(name==='settings')renderSettings();
+}
+
+// DATA
+function switchDataTab(tab,el){
+  document.querySelectorAll('.ttab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  renderDataScreen();
+}
+
+function changeMonth(d){
+  state.dataMonth.m+=d;
+  if(state.dataMonth.m>12){state.dataMonth.m=1;state.dataMonth.y++;}
+  if(state.dataMonth.m<1){state.dataMonth.m=12;state.dataMonth.y--;}
+  updateMonthLabel();
+  renderDataScreen();
+}
+
+function updateMonthLabel(){
+  document.getElementById('month-label').textContent=`${state.dataMonth.y}年${state.dataMonth.m}月`;
+}
+
+function renderDataScreen(){
+  renderBMIChart();
+  renderHealthCharts();
+  renderHabitRings();
+}
+
+function renderBMIChart(){
+  let ctx=document.getElementById('bmi-chart').getContext('2d');
+  if(state.bmiChart)state.bmiChart.destroy();
+  let labels=state.weeks.map(w=>w.split(' ')[0]);
+  let data=state.weeks.map((_,i)=>{
+    let r=state.records['w'+i];
+    if(r&&r.weight&&r.height){
+      let w=parseFloat(r.weight),h=parseFloat(r.height);
+      if(w&&h&&h>50)return+(w/((h/100)**2)).toFixed(1);
+    }
+    return null;
+  });
+  state.bmiChart=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[{data,borderColor:'#C8694A',backgroundColor:'rgba(200,105,74,.1)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#C8694A',tension:.4,fill:true,spanGaps:true}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{min:15,max:35,ticks:{stepSize:5,font:{size:10}},grid:{color:'rgba(200,150,120,.12)'}},
+              x:{ticks:{font:{size:9}},grid:{display:false}}}}
+  });
+}
+
+function renderHealthCharts(){
+  state.healthCharts.forEach(c=>c.destroy());
+  state.healthCharts=[];
+  let c=document.getElementById('health-charts');
+  c.innerHTML='';
+  let labels=state.weeks.map(w=>w.split(' ')[0]);
+  state.categories.forEach(cat=>{
+    let div=document.createElement('div');
+    div.className='chart-card';
+    let canvases=cat.fields.slice(0,2).map(f=>`
+      <div style="font-size:11px;color:var(--brown-mid);margin:6px 0 3px;">${f.name}</div>
+      <div style="height:75px;"><canvas id="hc-${f.id}"></canvas></div>`).join('');
+    div.innerHTML=`<div class="chart-title">${cat.name}</div>
+      <div class="chart-sub">1=完全恢复 → 4=问题严重</div>
+      ${canvases}
+      <div class="chart-legend">
+        <div class="leg"><div class="leg-dot" style="background:#2E7D52;"></div>逐步向好</div>
+        <div class="leg"><div class="leg-dot" style="background:#E24B4A;"></div>逐步变差</div>
+      </div>`;
+    c.appendChild(div);
+    cat.fields.slice(0,2).forEach(f=>{
+      let el=document.getElementById('hc-'+f.id);
+      if(!el)return;
+      let vals=state.weeks.map((_,i)=>(state.records['w'+i]?.health[f.id])||Math.ceil(Math.random()*3));
+      let improving=vals[vals.length-1]<=vals[0];
+      let color=improving?'#2E7D52':'#E24B4A';
+      let ch=new Chart(el.getContext('2d'),{
+        type:'line',
+        data:{labels,datasets:[{data:vals,borderColor:color,backgroundColor:color+'18',borderWidth:2,pointRadius:3,pointBackgroundColor:color,tension:.4,fill:true}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+          scales:{y:{min:.5,max:4.5,ticks:{stepSize:1,callback:v=>({1:'佳',2:'轻',3:'重',4:'差'}[v]||''),font:{size:9}},grid:{color:'rgba(200,150,120,.1)'}},
+                  x:{ticks:{font:{size:9}},grid:{display:false}}}}
+      });
+      state.healthCharts.push(ch);
+    });
+  });
+}
+
+function renderHabitRings(){
+  let c=document.getElementById('habit-rings');
+  let total=state.weeks.length;
+  c.innerHTML=state.habits.map(h=>{
+    let done=state.weeks.reduce((s,_,i)=>s+(state.records['w'+i]?.habits[h.id]===1?1:0),0);
+    let pct=total?Math.round(done/total*100):0;
+    let circ=2*Math.PI*22;
+    let filled=(circ*pct/100).toFixed(1);
+    let empty=(circ-filled).toFixed(1);
+    let color=pct>=70?'#2E7D52':pct>=40?'#BA7517':'#E24B4A';
+    let label=h.name.length>6?h.name.slice(0,6)+'…':h.name;
+    return `<div class="ring-item">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="22" fill="none" stroke="#F0E5DA" stroke-width="7"/>
+        <circle cx="32" cy="32" r="22" fill="none" stroke="${color}" stroke-width="7"
+          stroke-dasharray="${filled} ${empty}" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+        <text x="32" y="37" text-anchor="middle" font-size="13" font-weight="600" fill="${color}">${pct}%</text>
+      </svg>
+      <span>${label}</span>
+    </div>`;
+  }).join('');
+}
+
+// SETTINGS
+function renderSettings(){
+  let c=document.getElementById('health-fields-settings');
+  c.innerHTML='';
+  state.categories.forEach(cat=>{
+    let color=CAT_COLORS[cat.name]||'var(--coral)';
+    let div=document.createElement('div');
+    div.className='set-group';
+    div.innerHTML=`<div class="set-parent">
+      <div class="set-parent-label"><div class="cat-dot" style="background:${color};"></div>${cat.name}</div>
+      <div>
+        <button class="ic-btn" onclick="openModal('新增字段','addField','${cat.id}')">+</button>
+        <button class="ic-btn" onclick="deleteCat('${cat.id}')">⌫</button>
+      </div>
+    </div>`+cat.fields.map(f=>`<div class="set-child">
+      <span class="set-child-name">${f.name}</span>
+      <div>
+        <button class="ic-btn" onclick="openModal('编辑字段','editField','${cat.id}','${f.id}','${f.name}')">✎</button>
+        <button class="ic-btn" onclick="deleteField('${cat.id}','${f.id}')">⌫</button>
+      </div>
+    </div>`).join('');
+    c.appendChild(div);
+  });
+  document.getElementById('habit-settings').innerHTML=state.habits.map(h=>`
+    <div class="habit-row" style="border-top:.5px solid var(--bg2);">
+      <span class="habit-name">${h.name}</span>
+      <div>
+        <button class="ic-btn" onclick="openModal('编辑计划','editHabit',null,'${h.id}','${h.name}')">✎</button>
+        <button class="ic-btn" onclick="deleteHabit('${h.id}')">⌫</button>
+      </div>
+    </div>`).join('');
+}
+
+// MODAL
+let _mAction=null,_mCatId=null,_mFid=null;
+function openModal(title,action,catId,fid,curVal){
+  _mAction=action;_mCatId=catId||null;_mFid=fid||null;
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-input').value=curVal||'';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('modal-input').focus(),100);
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+function confirmModal(){
+  let val=document.getElementById('modal-input').value.trim();
+  if(!val)return;
+  if(_mAction==='addCat'){
+    state.categories.push({id:'c'+Date.now(),name:val,fields:[]});
+  } else if(_mAction==='addField'){
+    let cat=state.categories.find(c=>c.id===_mCatId);
+    if(cat)cat.fields.push({id:'f'+Date.now(),name:val});
+  } else if(_mAction==='editField'){
+    let cat=state.categories.find(c=>c.id===_mCatId);
+    if(cat){let f=cat.fields.find(f=>f.id===_mFid);if(f)f.name=val;}
+  } else if(_mAction==='addHabit'){
+    state.habits.push({id:'h'+Date.now(),name:val});
+  } else if(_mAction==='editHabit'){
+    let h=state.habits.find(h=>h.id===_mFid);if(h)h.name=val;
+  }
+  closeModal();
+  renderSettings();
+  renderHealthCards();
+  renderHabitCard();
+  showToast('已保存');
+}
+function deleteCat(id){
+  state.categories=state.categories.filter(c=>c.id!==id);
+  renderSettings();renderHealthCards();showToast('已删除');
+}
+function deleteField(cid,fid){
+  let cat=state.categories.find(c=>c.id===cid);
+  if(cat)cat.fields=cat.fields.filter(f=>f.id!==fid);
+  renderSettings();renderHealthCards();showToast('已删除');
+}
+function deleteHabit(id){
+  state.habits=state.habits.filter(h=>h.id!==id);
+  renderSettings();renderHabitCard();showToast('已删除');
+}
+
+function showToast(msg){
+  let t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+// INIT
+buildWeeks();
+renderWeekStrip();
+updateMonthLabel();
+loadHomeData();
+</script>
+</body>
+</html>
