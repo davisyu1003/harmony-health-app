@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#C8694A"/>
+      <stop offset="100%" style="stop-color:#b85a3d"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景 -->
+  <rect width="512" height="512" rx="80" fill="url(#bg)"/>
+  
+  <!-- 小鱼图标 -->
+  <g transform="translate(256, 256)">
+    <!-- 鱼身 -->
+    <ellipse cx="0" cy="0" rx="120" ry="80" fill="#fff"/>
+    
+    <!-- 鱼尾 -->
+    <path d="M 120 0 L 180 -50 L 180 50 Z" fill="#fff"/>
+    
+    <!-- 鱼眼 -->
+    <circle cx="-40" cy="-15" r="20" fill="#C8694A"/>
+    <circle cx="-45" cy="-20" r="8" fill="#fff"/>
+    
+    <!-- 鱼鳍 -->
+    <path d="M 0 -80 Q 30 -120 60 -80 Q 30 -60 0 -80" fill="#fff" opacity="0.9"/>
+    <path d="M 0 80 Q 30 120 60 80 Q 30 60 0 80" fill="#fff" opacity="0.9"/>
+    
+    <!-- 心形装饰 -->
+    <path d="M -20 20 C -20 10 -10 0 0 10 C 10 0 20 10 20 20 C 20 40 0 60 0 60 C 0 60 -20 40 -20 20" fill="#E24B4A" opacity="0.8"/>
+  </g>
+  
+  <!-- 文字 -->
+  <text x="256" y="380" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="48" font-weight="600" fill="#fff">小鱼健康</text>
+</svg>
