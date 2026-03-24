@@ -42,10 +42,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .hdr-white .title{font-size:20px;font-weight:600;color:var(--brown);}
 
 /* week strip */
-.week-strip{display:flex;gap:4px;padding:10px 16px;background:var(--bg2);overflow-x:auto;flex-shrink:0;}
+.week-strip{display:flex;gap:6px;padding:10px 16px;background:var(--bg2);overflow-x:auto;flex-shrink:0;}
 .week-strip::-webkit-scrollbar{display:none;}
-.wtab{font-size:11px;color:var(--brown-mid);padding:5px 12px;border-radius:16px;cursor:pointer;white-space:nowrap;border:none;background:transparent;}
-.wtab.on{background:var(--coral);color:#fff;font-weight:600;}
+.wtab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--brown-mid);padding:6px 14px;border-radius:16px;cursor:pointer;white-space:nowrap;border:none;background:transparent;min-width:60px;}
+.wtab-main{font-weight:500;font-size:12px;}
+.wtab-range{font-size:9px;color:var(--brown-light);}
+.wtab.on{background:var(--coral);color:#fff;}
+.wtab.on .wtab-main{font-weight:700;font-size:13px;}
+.wtab.on .wtab-range{color:rgba(255,255,255,.85);}
 
 /* body */
 .sbody{padding:14px 16px 20px;}
@@ -586,9 +590,17 @@ function renderWeekStrip(){
   let strip = document.getElementById('week-strip');
   
   // 渲染所有周标签
-  strip.innerHTML = state.weeks.map((w, i) => 
-    `<button class="wtab${i === state.currentWeek ? ' on' : ''}" onclick="selectWeek(${i})">${w.label}</button>`
-  ).join('');
+  strip.innerHTML = state.weeks.map((w, i) => {
+    let isCurrent = i === state.currentWeek;
+    let fmt = n => n.toString().padStart(2, '0');
+    let dateRange = `${fmt(w.start.getMonth()+1)}/${fmt(w.start.getDate())}-${fmt(w.end.getDate())}`;
+    let label = isCurrent ? `本周 ${w.label}` : w.label;
+    
+    return `<button class="wtab${isCurrent ? ' on' : ''}" onclick="selectWeek(${i})">
+      <span class="wtab-main">${label}</span>
+      <span class="wtab-range">(${dateRange})</span>
+    </button>`;
+  }).join('');
   
   // 滚动到当前周（显示在左侧）
   setTimeout(() => {
