@@ -402,9 +402,20 @@ let state={
 };
 
 function rec(){
-  let k='w'+state.currentWeek;
-  if(!state.records[k])state.records[k]={health:{},habits:{},note:'',weight:'',height:''};
-  return state.records[k];
+  // 使用周 key (w1, w2, ... w52)
+  let weekKey = state.weeks[state.currentWeek]?.key || 'w1';
+  if(!state.records[weekKey]) {
+    state.records[weekKey] = {
+      health: {}, 
+      habits: {}, 
+      note: '', 
+      weight: '', 
+      height: '',
+      bmi: null,
+      bmiCategory: ''
+    };
+  }
+  return state.records[weekKey];
 }
 
 // 用户管理
@@ -506,27 +517,99 @@ function syncNow(){
   syncToCloud();
 }
 
-// WEEKS
+// WEEKS - 2026年自然周
 function buildWeeks(){
-  let d=new Date(),base=new Date(d);
-  base.setDate(base.getDate()-base.getDay()+1);
-  for(let i=4;i>=0;i--){
-    let s=new Date(base);s.setDate(s.getDate()-7*i);
-    let e=new Date(s);e.setDate(e.getDate()+6);
-    let fmt=n=>n.toString().padStart(2,'0');
-    state.weeks.push(`W${5-i} ${fmt(s.getMonth()+1)}/${fmt(s.getDate())}–${fmt(e.getDate())}`);
+  // 生成2026年所有自然周（周一到周日）
+  const year = 2026;
+  let weeks = [];
+  
+  // 找到2026年第一个周一
+  let firstDay = new Date(year, 0, 1);
+  let firstMonday = new Date(firstDay);
+  
+  // 调整到第一个周一
+  let dayOfWeek = firstDay.getDay();
+  if (dayOfWeek === 0) {
+    firstMonday.setDate(firstDay.getDate() + 1);
+  } else if (dayOfWeek !== 1) {
+    firstMonday.setDate(firstDay.getDate() + (8 - dayOfWeek));
+  }
+  
+  // 生成所有周
+  let currentWeek = new Date(firstMonday);
+  let weekNum = 1;
+  
+  while (currentWeek.getFullYear() === year || 
+         (currentWeek.getFullYear() === year + 1 && currentWeek.getMonth() === 0 && currentWeek.getDate() <= 7)) {
+    let weekStart = new Date(currentWeek);
+    let weekEnd = new Date(currentWeek);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    
+    let fmt = n => n.toString().padStart(2, '0');
+    weeks.push({
+      id: weekNum,
+      label: `W${weekNum}`,
+      fullLabel: `W${weekNum} ${fmt(weekStart.getMonth()+1)}/${fmt(weekStart.getDate())}-${fmt(weekEnd.getMonth()+1)}/${fmt(weekEnd.getDate())}`,
+      start: weekStart,
+      end: weekEnd,
+      key: `w${weekNum}`
+    });
+    
+    currentWeek.setDate(currentWeek.getDate() + 7);
+    weekNum++;
+  }
+  
+  state.weeks = weeks;
+  
+  // 找到当前周
+  let today = new Date();
+  let currentYear = today.getFullYear();
+  
+  if (currentYear === year) {
+    // 找到包含今天的周
+    let found = weeks.findIndex(w => today >= w.start && today <= w.end);
+    if (found !== -1) {
+      state.currentWeek = found;
+    } else {
+      state.currentWeek = weeks.length - 1; // 默认最后一周
+    }
+  } else if (currentYear > year) {
+    // 如果已经过了2026年，显示最后一周
+    state.currentWeek = weeks.length - 1;
+  } else {
+    // 如果还没到2026年，显示第一周
+    state.currentWeek = 0;
   }
 }
 
 function renderWeekStrip(){
-  document.getElementById('week-strip').innerHTML=
-    state.weeks.map((w,i)=>`<button class="wtab${i===state.currentWeek?' on':''}" onclick="selectWeek(${i})">${w}</button>`).join('');
+  let strip = document.getElementById('week-strip');
+  
+  // 渲染所有周标签
+  strip.innerHTML = state.weeks.map((w, i) => 
+    `<button class="wtab${i === state.currentWeek ? ' on' : ''}" onclick="selectWeek(${i})">${w.label}</button>`
+  ).join('');
+  
+  // 滚动到当前周（显示在左侧）
+  setTimeout(() => {
+    let currentTab = strip.querySelector('.wtab.on');
+    if (currentTab) {
+      currentTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+    }
+  }, 100);
 }
 
 function selectWeek(i){
-  state.currentWeek=i;
+  state.currentWeek = i;
   renderWeekStrip();
   loadHomeData();
+  
+  // 滚动到选中的周
+  let strip = document.getElementById('week-strip');
+  let selectedTab = strip.children[i];
+  if (selectedTab) {
+    selectedTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+  }
 }
 
 // HOME
@@ -740,21 +823,49 @@ function renderDataScreen(){
 function renderBMIChart(){
   let ctx=document.getElementById('bmi-chart').getContext('2d');
   if(state.bmiChart)state.bmiChart.destroy();
-  let labels=state.weeks.map(w=>w.split(' ')[0]);
-  let data=state.weeks.map((_,i)=>{
-    let r=state.records['w'+i];
-    if(r&&r.weight&&r.height){
-      let w=parseFloat(r.weight),h=parseFloat(r.height);
-      if(w&&h&&h>50)return+(w/((h/100)**2)).toFixed(1);
+  
+  // 显示最近 10 周的数据
+  let startWeek = Math.max(0, state.currentWeek - 4);
+  let endWeek = Math.min(state.weeks.length, state.currentWeek + 5);
+  let displayWeeks = state.weeks.slice(startWeek, endWeek);
+  
+  let labels = displayWeeks.map(w => w.label);
+  let data = displayWeeks.map(w => {
+    let r = state.records[w.key];
+    if(r && r.weight && r.height){
+      let weight = parseFloat(r.weight), height = parseFloat(r.height);
+      if(weight && height && height > 50) {
+        return +(weight / ((height/100)**2)).toFixed(1);
+      }
     }
     return null;
   });
-  state.bmiChart=new Chart(ctx,{
-    type:'line',
-    data:{labels,datasets:[{data,borderColor:'#C8694A',backgroundColor:'rgba(200,105,74,.1)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#C8694A',tension:.4,fill:true,spanGaps:true}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{y:{min:15,max:35,ticks:{stepSize:5,font:{size:10}},grid:{color:'rgba(200,150,120,.12)'}},
-              x:{ticks:{font:{size:9}},grid:{display:false}}}}
+  
+  state.bmiChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels, 
+      datasets: [{
+        data, 
+        borderColor: '#C8694A', 
+        backgroundColor: 'rgba(200,105,74,.1)', 
+        borderWidth: 2, 
+        pointRadius: 4, 
+        pointBackgroundColor: '#C8694A', 
+        tension: .4, 
+        fill: true, 
+        spanGaps: true
+      }]
+    },
+    options: {
+      responsive: true, 
+      maintainAspectRatio: false, 
+      plugins: {legend: {display: false}},
+      scales: {
+        y: {min: 15, max: 35, ticks: {stepSize: 5, font: {size: 10}}, grid: {color: 'rgba(200,150,120,.12)'}},
+        x: {ticks: {font: {size: 9}}, grid: {display: false}}
+      }
+    }
   });
 }
 
@@ -763,7 +874,12 @@ function renderHealthCharts(){
   state.healthCharts=[];
   let c=document.getElementById('health-charts');
   c.innerHTML='';
-  let labels=state.weeks.map(w=>w.split(' ')[0]);
+  
+  // 显示最近 10 周的数据
+  let startWeek = Math.max(0, state.currentWeek - 4);
+  let endWeek = Math.min(state.weeks.length, state.currentWeek + 5);
+  let displayWeeks = state.weeks.slice(startWeek, endWeek);
+  let labels = displayWeeks.map(w => w.label);
   state.categories.forEach(cat=>{
     let div=document.createElement('div');
     div.className='chart-card';
@@ -781,15 +897,33 @@ function renderHealthCharts(){
     cat.fields.slice(0,2).forEach(f=>{
       let el=document.getElementById('hc-'+f.id);
       if(!el)return;
-      let vals=state.weeks.map((_,i)=>(state.records['w'+i]?.health[f.id])||Math.ceil(Math.random()*3));
-      let improving=vals[vals.length-1]<=vals[0];
-      let color=improving?'#2E7D52':'#E24B4A';
-      let ch=new Chart(el.getContext('2d'),{
-        type:'line',
-        data:{labels,datasets:[{data:vals,borderColor:color,backgroundColor:color+'18',borderWidth:2,pointRadius:3,pointBackgroundColor:color,tension:.4,fill:true}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-          scales:{y:{min:.5,max:4.5,ticks:{stepSize:1,callback:v=>({1:'佳',2:'轻',3:'重',4:'差'}[v]||''),font:{size:9}},grid:{color:'rgba(200,150,120,.1)'}},
-                  x:{ticks:{font:{size:9}},grid:{display:false}}}}
+      let vals = displayWeeks.map(w => state.records[w.key]?.health[f.id] || 0);
+      let improving = vals[vals.length-1] <= vals[0];
+      let color = improving ? '#2E7D52' : '#E24B4A';
+      let ch = new Chart(el.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels, 
+          datasets: [{
+            data: vals, 
+            borderColor: color, 
+            backgroundColor: color + '18', 
+            borderWidth: 2, 
+            pointRadius: 3, 
+            pointBackgroundColor: color, 
+            tension: .4, 
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: {legend: {display: false}},
+          scales: {
+            y: {min: .5, max: 4.5, ticks: {stepSize: 1, callback: v => ({1:'佳',2:'轻',3:'重',4:'差'}[v]||''), font: {size: 9}}, grid: {color: 'rgba(200,150,120,.1)'}},
+            x: {ticks: {font: {size: 9}}, grid: {display: false}}
+          }
+        }
       });
       state.healthCharts.push(ch);
     });
@@ -798,15 +932,16 @@ function renderHealthCharts(){
 
 function renderHabitRings(){
   let c=document.getElementById('habit-rings');
-  let total=state.weeks.length;
-  c.innerHTML=state.habits.map(h=>{
-    let done=state.weeks.reduce((s,_,i)=>s+(state.records['w'+i]?.habits[h.id]===1?1:0),0);
-    let pct=total?Math.round(done/total*100):0;
-    let circ=2*Math.PI*22;
-    let filled=(circ*pct/100).toFixed(1);
-    let empty=(circ-filled).toFixed(1);
-    let color=pct>=70?'#2E7D52':pct>=40?'#BA7517':'#E24B4A';
-    let label=h.name.length>6?h.name.slice(0,6)+'…':h.name;
+  let total = state.weeks.length;
+  c.innerHTML = state.habits.map(h => {
+    // 计算所有周的完成率
+    let done = state.weeks.reduce((s, w) => s + (state.records[w.key]?.habits[h.id] === 1 ? 1 : 0), 0);
+    let pct = total ? Math.round(done/total*100) : 0;
+    let circ = 2*Math.PI*22;
+    let filled = (circ*pct/100).toFixed(1);
+    let empty = (circ-filled).toFixed(1);
+    let color = pct >= 70 ? '#2E7D52' : pct >= 40 ? '#BA7517' : '#E24B4A';
+    let label = h.name.length > 6 ? h.name.slice(0,6)+'…' : h.name;
     return `<div class="ring-item">
       <svg width="64" height="64" viewBox="0 0 64 64">
         <circle cx="32" cy="32" r="22" fill="none" stroke="#F0E5DA" stroke-width="7"/>
