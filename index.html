@@ -215,6 +215,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
     </div>
 
+    <!-- BMI 统计卡片 -->
+    <div class="card" id="bmi-stats-card" style="display:none;">
+      <div class="card-hdr">
+        <div class="card-hdr-title">本周 BMI 统计</div>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;justify-content:space-around;align-items:center;padding:10px 0;">
+          <div style="text-align:center;">
+            <div style="font-size:24px;font-weight:700;color:var(--coral);" id="stats-bmi">--</div>
+            <div style="font-size:11px;color:var(--brown-light);margin-top:4px;">BMI 指数</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:24px;font-weight:700;color:var(--brown);" id="stats-weight">--</div>
+            <div style="font-size:11px;color:var(--brown-light);margin-top:4px;">体重 (KG)</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:24px;font-weight:700;color:var(--brown);" id="stats-height">--</div>
+            <div style="font-size:11px;color:var(--brown-light);margin-top:4px;">身高 (CM)</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:var(--bg2);border-radius:8px;text-align:center;">
+          <div style="font-size:12px;font-weight:600;color:var(--brown);" id="stats-category">--</div>
+          <div style="font-size:10px;color:var(--brown-light);margin-top:4px;" id="stats-advice">请输入体重和身高</div>
+        </div>
+      </div>
+    </div>
+
     <div class="sec-label">周健康状态</div>
     <div id="health-cards"></div>
 
@@ -509,6 +536,26 @@ function loadHomeData(){
   document.getElementById('inp-height').value=r.height;
   document.getElementById('week-note').value=r.note;
   calcBMI();
+  
+  // 显示 BMI 统计
+  if(r.bmi) {
+    document.getElementById('bmi-stats-card').style.display = 'block';
+    document.getElementById('stats-bmi').textContent = r.bmi;
+    document.getElementById('stats-weight').textContent = r.weight || '--';
+    document.getElementById('stats-height').textContent = r.height || '--';
+    document.getElementById('stats-category').textContent = r.bmiCategory || '--';
+    
+    // 根据 BMI 档位显示建议
+    let advice = '';
+    if(r.bmiCategory === '偏轻') advice = '💪 建议增加营养摄入和运动';
+    else if(r.bmiCategory === '正常') advice = '✨ 保持现有的健康生活方式';
+    else if(r.bmiCategory === '偏重') advice = '🏃 建议适度运动和控制饮食';
+    else if(r.bmiCategory === '肥胖') advice = '⚠️ 建议咨询医生制定健康计划';
+    document.getElementById('stats-advice').textContent = advice;
+  } else {
+    document.getElementById('bmi-stats-card').style.display = 'none';
+  }
+  
   renderHealthCards();
   renderHabitCard();
 }
@@ -523,6 +570,10 @@ function calcBMI(){
   r.weight=wEl.value;
   r.height=hEl.value;
   saveUserData();
+  updateBMIDisplay(w, h);
+}
+
+function updateBMIDisplay(w, h){
   let valEl=document.getElementById('bmi-val');
   let tagEl=document.getElementById('bmi-tag');
   let barEl=document.getElementById('bmi-bar');
@@ -622,9 +673,32 @@ function setHabit(hid,val){
 }
 
 function saveWeek(){
-  rec().note=document.getElementById('week-note').value;
+  let r = rec();
+  r.note = document.getElementById('week-note').value;
+  
+  // 获取体重和身高
+  let weight = parseFloat(document.getElementById('inp-weight').value);
+  let height = parseFloat(document.getElementById('inp-height').value);
+  
+  // 自动计算 BMI 并保存
+  if(weight && height && height > 50 && weight > 10) {
+    let bmi = weight / ((height/100)**2);
+    r.bmi = parseFloat(bmi.toFixed(1));
+    
+    // 确定 BMI 档位
+    let category = '';
+    if(bmi < 18.5) category = '偏轻';
+    else if(bmi < 24) category = '正常';
+    else if(bmi < 28) category = '偏重';
+    else category = '肥胖';
+    r.bmiCategory = category;
+    
+    showToast(`✓ 本周记录已保存 (BMI: ${r.bmi} - ${category})`);
+  } else {
+    showToast('本周记录已保存 ✓');
+  }
+  
   saveUserData();
-  showToast('本周记录已保存 ✓');
   syncToCloud();
 }
 
