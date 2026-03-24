@@ -498,7 +498,13 @@ function saveUserData(){
 
 // 云端同步函数
 async function syncToCloud(){
-  if(!currentUser) return;
+  if(!currentUser) {
+    console.log('❌ 同步失败: 未选择用户');
+    return;
+  }
+  
+  console.log('🔄 开始同步, 用户:', currentUser);
+  console.log('📊 同步数据:', JSON.stringify(state));
   
   updateSyncStatus('syncing', '🔄 同步中...');
   try {
@@ -523,7 +529,7 @@ async function syncToCloud(){
       setTimeout(() => updateSyncStatus('online', '📱 在线'), 2000);
     } else {
       const err = await response.text();
-      console.error('❌ 同步失败:', err);
+      console.error('❌ 同步失败:', response.status, err);
       updateSyncStatus('error', '✗ 同步失败');
     }
   } catch(e) {
