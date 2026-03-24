@@ -44,12 +44,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 /* week strip */
 .week-strip{display:flex;gap:6px;padding:10px 16px;background:var(--bg2);overflow-x:auto;flex-shrink:0;}
 .week-strip::-webkit-scrollbar{display:none;}
-.wtab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--brown-mid);padding:6px 14px;border-radius:16px;cursor:pointer;white-space:nowrap;border:none;background:transparent;min-width:60px;}
-.wtab-main{font-weight:500;font-size:12px;}
-.wtab-range{font-size:9px;color:var(--brown-light);}
+.wtab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--brown-mid);padding:6px 14px;border-radius:16px;cursor:pointer;white-space:nowrap;border:none;background:transparent;min-width:60px;height:48px;}
+.wtab-main{font-weight:500;font-size:12px;line-height:1.2;}
+.wtab-range{font-size:9px;color:var(--brown-light);line-height:1;}
 .wtab.on{background:var(--coral);color:#fff;}
-.wtab.on .wtab-main{font-weight:700;font-size:13px;}
-.wtab.on .wtab-range{color:rgba(255,255,255,.85);}
+.wtab.on .wtab-main{font-weight:700;font-size:13px;line-height:1.2;}
+.wtab.on .wtab-range{font-size:9px;color:rgba(255,255,255,.85);line-height:1;}
 
 /* body */
 .sbody{padding:14px 16px 20px;}
