@@ -4,6 +4,36 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>小鱼健康</title>
+
+<!-- PWA Meta Tags -->
+<meta name="theme-color" content="#C8694A">
+<meta name="description" content="个人健康管理应用，记录BMI、健康状态和养生习惯">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="小鱼健康">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="小鱼健康">
+<meta name="msapplication-TileColor" content="#C8694A">
+<meta name="msapplication-tap-highlight" content="no">
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="/manifest.json">
+
+<!-- Apple Touch Icons -->
+<link rel="apple-touch-icon" href="/icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="72x72" href="/icons/icon-72.png">
+<link rel="apple-touch-icon" sizes="96x96" href="/icons/icon-96.png">
+<link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128.png">
+<link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png">
+<link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="384x384" href="/icons/icon-384.png">
+<link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png">
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -1077,6 +1107,177 @@ function init(){
 }
 
 init();
+
+// 注册 Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      console.log('✅ Service Worker 注册成功:', registration.scope);
+      
+      // 检查更新
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // 新版本可用
+            showUpdateNotification();
+          }
+        });
+      });
+    } catch (error) {
+      console.error('❌ Service Worker 注册失败:', error);
+    }
+  });
+}
+
+// 显示更新通知
+function showUpdateNotification() {
+  showToast('🎉 新版本可用，刷新页面即可更新');
+}
+
+// PWA 安装提示
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  
+  // 显示自定义安装按钮（3秒后）
+  setTimeout(() => {
+    showInstallButton();
+  }, 3000);
+});
+
+function showInstallButton() {
+  // 检查是否已安装
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    return;
+  }
+  
+  // 检查是否已拒绝安装
+  if (localStorage.getItem('pwa-install-dismissed')) {
+    return;
+  }
+  
+  const installBtn = document.createElement('button');
+  installBtn.className = 'pwa-install-btn';
+  installBtn.innerHTML = '📱 安装到主屏幕';
+  installBtn.onclick = installApp;
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '×';
+  closeBtn.className = 'pwa-install-close';
+  closeBtn.onclick = (e) => {
+    e.stopPropagation();
+    installBtn.remove();
+    localStorage.setItem('pwa-install-dismissed', 'true');
+  };
+  
+  installBtn.appendChild(closeBtn);
+  document.body.appendChild(installBtn);
+}
+
+async function installApp() {
+  if (!deferredPrompt) return;
+  
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  
+  if (outcome === 'accepted') {
+    console.log('✅ 用户安装了应用');
+    showToast('🎉 应用已安装到主屏幕');
+  }
+  
+  deferredPrompt = null;
+  
+  // 移除安装按钮
+  const btn = document.querySelector('.pwa-install-btn');
+  if (btn) btn.remove();
+}
+
+// 检测是否已安装
+window.addEventListener('appinstalled', () => {
+  console.log('✅ 应用已安装');
+  const btn = document.querySelector('.pwa-install-btn');
+  if (btn) btn.remove();
+});
 </script>
+
+<style>
+/* PWA 安装按钮 */
+.pwa-install-btn {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--coral);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 25px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 999;
+  box-shadow: 0 4px 16px rgba(200, 105, 74, 0.3);
+  animation: bounceIn 0.5s ease-out;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.pwa-install-btn:hover {
+  background: #B85A3E;
+  box-shadow: 0 6px 20px rgba(200, 105, 74, 0.4);
+}
+
+.pwa-install-close {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #333;
+  color: white;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.pwa-install-close:hover {
+  background: #555;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: translateX(-50%) scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(-50%) scale(1.1);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 390px) {
+  .pwa-install-btn {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 85px;
+  }
+}
+</style>
+
 </body>
 </html>
