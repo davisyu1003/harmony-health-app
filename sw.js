@@ -5,9 +5,9 @@ const DYNAMIC_CACHE = 'dynamic-v1';
 
 // 需要缓存的静态资源
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  './',
+  './index.html',
+  './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'
 ];
 
@@ -66,7 +66,7 @@ async function cacheFirst(request) {
     return response;
   } catch (error) {
     // 离线时返回缓存首页
-    return caches.match('/index.html');
+    return caches.match('./index.html');
   }
 }
 
@@ -101,8 +101,8 @@ async function syncHealthData() {
 self.addEventListener('push', event => {
   const options = {
     body: event.data ? event.data.text() : '新的健康提醒',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-72.png',
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-72.png',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
@@ -125,7 +125,7 @@ self.addEventListener('notificationclick', event => {
   
   if (event.action === 'record') {
     event.waitUntil(
-      clients.openWindow('/?action=record')
+      clients.openWindow('./?action=record')
     );
   }
 });

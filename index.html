@@ -17,22 +17,22 @@
 <meta name="msapplication-tap-highlight" content="no">
 
 <!-- PWA Manifest -->
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="./manifest.json">
 
 <!-- Apple Touch Icons -->
-<link rel="apple-touch-icon" href="/icons/icon-152.png">
-<link rel="apple-touch-icon" sizes="72x72" href="/icons/icon-72.png">
-<link rel="apple-touch-icon" sizes="96x96" href="/icons/icon-96.png">
-<link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128.png">
-<link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png">
-<link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png">
-<link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
-<link rel="apple-touch-icon" sizes="384x384" href="/icons/icon-384.png">
-<link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png">
+<link rel="apple-touch-icon" href="./icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="72x72" href="./icons/icon-72.png">
+<link rel="apple-touch-icon" sizes="96x96" href="./icons/icon-96.png">
+<link rel="apple-touch-icon" sizes="128x128" href="./icons/icon-128.png">
+<link rel="apple-touch-icon" sizes="144x144" href="./icons/icon-144.png">
+<link rel="apple-touch-icon" sizes="152x152" href="./icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="384x384" href="./icons/icon-384.png">
+<link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png">
 
 <!-- Favicon -->
-<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="./icons/icon-16.png">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -1133,7 +1133,7 @@ init();
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
+      const registration = await navigator.serviceWorker.register('./sw.js');
       console.log('✅ Service Worker 注册成功:', registration.scope);
       
       // 检查更新
