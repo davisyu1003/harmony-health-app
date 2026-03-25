@@ -467,8 +467,13 @@ function showUserSelector(){
 }
 
 function selectUser(userId){
+  console.log('🔄 切换用户:', userId);
+  
+  // 保存当前用户
   currentUser = userId;
   localStorage.setItem('harmony_current_user', userId);
+  
+  // 隐藏用户选择器
   document.getElementById('user-selector').classList.remove('show');
   
   // 更新 UI
@@ -476,23 +481,38 @@ function selectUser(userId){
   document.getElementById('current-user').textContent = userName;
   document.getElementById('settings-user').textContent = userName;
   
-  // 加载用户数据
-  loadUserData();
-  
-  // 重新构建周数据（确保数据完整）
-  buildWeeks();
-  renderWeekStrip();
-  updateMonthLabel();
-  
   showToast(`✓ 已切换到 ${userName}`);
+  
+  // 延迟 500ms 后刷新页面，确保 UI 更新完成
+  setTimeout(() => {
+    console.log('🔄 刷新页面以加载新用户数据');
+    location.reload();
+  }, 500);
 }
 
 function loadUserData(){
+  console.log('📂 加载用户数据:', currentUser);
+  
   const key = `harmony_data_${currentUser}`;
   const saved = localStorage.getItem(key);
+  
   if(saved) {
+    console.log('✅ 找到已保存的用户数据');
     const data = JSON.parse(saved);
-    state = data;
+    
+    // 完全替换 state（确保账户隔离）
+    state = {
+      currentWeek: data.currentWeek || 0,
+      weeks: data.weeks || [],
+      categories: data.categories || state.categories,
+      habits: data.habits || state.habits,
+      records: data.records || {},
+      modalAction: null,
+      modalTarget: null,
+      dataMonth: data.dataMonth || {y: new Date().getFullYear(), m: new Date().getMonth()+1},
+      bmiChart: null,
+      healthCharts: []
+    };
     
     // 修复 weeks 中的 Date 对象（JSON 序列化后变成字符串）
     if (state.weeks && state.weeks.length > 0) {
@@ -503,6 +523,7 @@ function loadUserData(){
       }));
     }
   } else {
+    console.log('📝 新用户，初始化数据');
     // 新用户，初始化空数据
     state.records = {};
     state.currentWeek = 0;
@@ -510,15 +531,33 @@ function loadUserData(){
   
   // 确保 weeks 数据完整
   if (!state.weeks || state.weeks.length === 0) {
+    console.log('🔨 重建周数据');
     buildWeeks();
   }
+  
+  console.log('✅ 用户数据加载完成:', {user: currentUser, weeks: state.weeks.length, records: Object.keys(state.records).length});
   
   loadHomeData();
 }
 
 function saveUserData(){
+  if(!currentUser) {
+    console.warn('⚠️ 保存失败: 未选择用户');
+    return;
+  }
+  
   const key = `harmony_data_${currentUser}`;
-  localStorage.setItem(key, JSON.stringify(state));
+  const dataToSave = {
+    currentWeek: state.currentWeek,
+    weeks: state.weeks,
+    categories: state.categories,
+    habits: state.habits,
+    records: state.records,
+    dataMonth: state.dataMonth
+  };
+  
+  localStorage.setItem(key, JSON.stringify(dataToSave));
+  console.log('💾 用户数据已保存:', {user: currentUser, key: key});
 }
 
 // 云端同步函数
@@ -572,7 +611,10 @@ async function syncToCloud(){
 }
 
 async function syncFromCloud(){
-  if(!currentUser) return;
+  if(!currentUser) {
+    console.log('❌ 同步失败: 未选择用户');
+    return;
+  }
   
   try {
     const response = await fetch(`${JSONBIN_API}/b/${JSONBIN_BIN_ID}/latest`, {
@@ -584,11 +626,31 @@ async function syncFromCloud(){
     if(response.ok) {
       const data = await response.json();
       if(data.record && data.record.data) {
+        // 只同步当前用户的数据
+        if(data.record.data.user !== currentUser) {
+          console.log('⚠️ 云端数据属于其他用户，跳过同步');
+          return;
+        }
+        
+        console.log('📥 从云端加载数据:', currentUser);
+        
         // 保存当前的 weeks 数据
         const currentWeeks = state.weeks;
         
         // 加载云端数据
-        state = data.record.data;
+        const cloudData = data.record.data.data;
+        state = {
+          currentWeek: cloudData.currentWeek || 0,
+          weeks: cloudData.weeks || [],
+          categories: cloudData.categories || state.categories,
+          habits: cloudData.habits || state.habits,
+          records: cloudData.records || {},
+          modalAction: null,
+          modalTarget: null,
+          dataMonth: cloudData.dataMonth || {y: new Date().getFullYear(), m: new Date().getMonth()+1},
+          bmiChart: null,
+          healthCharts: []
+        };
         
         // 修复 weeks 中的 Date 对象
         if (state.weeks && state.weeks.length > 0) {
@@ -608,7 +670,7 @@ async function syncFromCloud(){
       }
     }
   } catch(e) {
-    console.error('Sync error:', e);
+    console.error('❌ 同步错误:', e);
   }
 }
 
@@ -1158,16 +1220,26 @@ function showToast(msg){
 
 // INIT
 function init(){
+  console.log('🚀 应用初始化中...');
+  
+  // 检查是否有已保存的用户
   const saved = localStorage.getItem('harmony_current_user');
   if(saved && USERS[saved]) {
-    selectUser(saved);
+    console.log('✅ 恢复上次用户:', saved);
+    currentUser = saved;
+    loadUserData();
   } else {
+    console.log('📋 显示用户选择器');
     showUserSelector();
+    return; // 等待用户选择
   }
   
+  // 初始化 UI
   buildWeeks();
   renderWeekStrip();
   updateMonthLabel();
+  
+  console.log('✅ 应用初始化完成');
   
   // 检查网络连接
   window.addEventListener('online', () => {
@@ -1184,6 +1256,7 @@ function init(){
   // 定时自动同步
   setInterval(() => {
     if(currentUser && navigator.onLine) {
+      console.log('⏰ 定时同步触发');
       syncToCloud();
     }
   }, 300000); // 每 5 分钟同步一次
