@@ -2,14 +2,14 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,maximum-scale=1">
 <title>小鱼健康</title>
 
 <!-- PWA Meta Tags -->
 <meta name="theme-color" content="#C8694A">
 <meta name="description" content="个人健康管理应用，记录BMI、健康状态和养生习惯">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="小鱼健康">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="application-name" content="小鱼健康">
@@ -36,29 +36,32 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
   --coral:#C8694A;--coral-light:#F5EDE6;
   --brown:#5C3420;--brown-mid:#8B5C40;--brown-light:#C4A090;
   --border:#EDD5C0;--bg:#FDFAF7;--bg2:#F5EDE6;
   --green:#2E7D52;--red:#C0392B;--amber:#BA7517;--blue:#185FA5;
+  --sat:env(safe-area-inset-top,0px);
+  --sab:env(safe-area-inset-bottom,0px);
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#EDE5D8;min-height:100vh;display:flex;justify-content:center;padding:16px 0;}
-.phone{width:390px;background:var(--bg);border-radius:40px;border:2px solid #D4C4B4;overflow:hidden;display:flex;flex-direction:column;min-height:780px;position:relative;}
-.screen{display:none;flex:1;flex-direction:column;overflow-y:auto;padding-bottom:70px;}
+html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;position:fixed;inset:0;}
+.phone{width:100%;height:100%;background:var(--bg);overflow:hidden;display:flex;flex-direction:column;position:relative;flex:1;padding-top:var(--sat);max-height:100%;}
+.screen{display:none;flex:1;flex-direction:column;overflow-y:auto;padding-bottom:calc(60px + var(--sab));-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;}
 .screen.active{display:flex;}
 
 /* header */
-.hdr-coral{background:var(--coral);padding:44px 18px 16px;flex-shrink:0;display:flex;justify-content:space-between;align-items:flex-start;}
+.hdr-coral{background:var(--coral);padding:12px 16px 10px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;}
 .hdr-left{flex:1;}
-.hdr-coral .brand{font-size:11px;color:rgba(255,255,255,.65);letter-spacing:.05em;}
-.hdr-coral .title{font-size:22px;font-weight:600;color:#fff;margin-top:4px;}
-.hdr-coral .sub{font-size:13px;color:rgba(255,255,255,.75);margin-top:2px;}
-.user-info{font-size:12px;color:rgba(255,255,255,.8);text-align:right;}
-.user-info .name{font-weight:600;font-size:14px;color:#fff;}
+.hdr-coral .brand{font-size:10px;color:rgba(255,255,255,.6);letter-spacing:.04em;}
+.hdr-coral .title{font-size:20px;font-weight:700;color:#fff;margin-top:2px;}
+.hdr-coral .sub{font-size:12px;color:rgba(255,255,255,.7);margin-top:1px;}
+.user-info{font-size:12px;color:rgba(255,255,255,.85);text-align:right;flex-shrink:0;}
+.user-info .name{font-weight:600;font-size:13px;color:#fff;}
 .user-info .switch{font-size:11px;color:rgba(255,255,255,.7);cursor:pointer;margin-top:4px;}
 
-.hdr-white{background:var(--bg);padding:44px 18px 12px;border-bottom:.5px solid var(--border);flex-shrink:0;}
+.hdr-white{background:var(--bg);padding:12px 16px 10px;border-bottom:.5px solid var(--border);flex-shrink:0;}
 .hdr-white .title{font-size:20px;font-weight:600;color:var(--brown);}
 
 /* week strip */
@@ -72,7 +75,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .wtab.on .wtab-range{font-size:9px;color:rgba(255,255,255,.85);line-height:1;}
 
 /* body */
-.sbody{padding:14px 16px 20px;}
+
+.sbody{padding:14px 16px 20px;-webkit-flex:1;flex:1;min-height:0;}
 .sec-label{font-size:10px;font-weight:600;color:var(--coral);letter-spacing:.06em;text-transform:uppercase;margin:14px 0 8px;}
 .sec-label:first-child{margin-top:0;}
 
@@ -157,16 +161,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .add-btn{width:100%;background:var(--bg2);border:.5px dashed var(--border);border-radius:10px;padding:10px;font-size:12px;font-weight:600;color:var(--brown-mid);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;}
 
 /* bottom nav - 固定位置 */
-.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:390px;display:flex;background:var(--bg);border-top:.5px solid var(--border);flex-shrink:0;z-index:1000;border-radius:0 0 40px 40px;}
-.bnav{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 10px;cursor:pointer;border:none;background:none;}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;width:100%;display:flex;background:var(--bg);border-top:.5px solid var(--border);flex-shrink:0;z-index:1000;padding-bottom:var(--sab);}
+.bnav{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:6px 0;cursor:pointer;border:none;background:none;}
 .bnav svg{width:22px;height:22px;}
 .bnav span{font-size:10px;color:var(--brown-light);}
 .bnav.on span{color:var(--coral);}
 
 /* modal */
-.modal-overlay{display:none;position:absolute;inset:0;background:rgba(60,30,10,.45);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(60,30,10,.45);z-index:100;align-items:center;justify-content:center;padding:20px;}
 .modal-overlay.open{display:flex;}
-.modal{background:#fff;border-radius:20px;padding:20px;width:300px;}
+.modal{background:#fff;border-radius:16px;padding:20px;width:100%;max-width:300px;}
 .modal h3{font-size:15px;font-weight:600;color:var(--brown);margin-bottom:16px;}
 .modal input{width:100%;background:var(--bg2);border:.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--brown);margin-bottom:10px;font-family:inherit;}
 .modal-btns{display:flex;gap:8px;}
@@ -175,11 +179,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn-confirm{background:var(--coral);color:#fff;}
 
 /* toast */
-.toast{display:none;position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(60,30,10,.88);color:#fff;font-size:12px;padding:8px 18px;border-radius:20px;z-index:200;white-space:nowrap;}
+.toast{display:none;position:fixed;bottom:calc(100px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:rgba(60,30,10,.88);color:#fff;font-size:12px;padding:8px 18px;border-radius:20px;z-index:200;white-space:nowrap;}
 .toast.show{display:block;}
 
 /* sync status */
-.sync-status{position:fixed;top:10px;right:10px;font-size:10px;color:var(--brown-mid);background:rgba(255,255,255,.9);padding:4px 8px;border-radius:12px;z-index:999;}
+.sync-status{position:fixed;top:calc(10px + env(safe-area-inset-top));right:10px;font-size:10px;color:var(--brown-mid);background:rgba(255,255,255,.9);padding:4px 8px;border-radius:12px;z-index:999;}
 .sync-status.syncing{color:var(--coral);}
 .sync-status.success{color:var(--green);}
 .sync-status.error{color:var(--red);}
@@ -1303,7 +1307,7 @@ window.addEventListener('appinstalled', () => {
 /* PWA 安装按钮 */
 .pwa-install-btn {
   position: fixed;
-  bottom: 90px;
+  bottom: calc(90px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   background: var(--coral);
