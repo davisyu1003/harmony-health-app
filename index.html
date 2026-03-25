@@ -478,22 +478,20 @@ function rec(){
 }
 
 // ===== 云端同步 =====
+// 数据结构：直接 PUT 业务数据到 Bin，syncFromCloud 直接读取
 
 async function syncToCloud(){
   updateSyncStatus('syncing', '🔄 同步中...');
   try {
-    // 只上传业务数据，不上传 Chart 实例等
-    const payload = {
-      user: 'xiaoyuer',
-      data: {
-        currentWeek: state.currentWeek,
-        weeks: state.weeks,
-        categories: state.categories,
-        habits: state.habits,
-        records: state.records,
-        dataMonth: state.dataMonth
-      },
-      timestamp: new Date().toISOString()
+    // 直接上传业务数据（扁平结构）
+    const businessData = {
+      currentWeek: state.currentWeek,
+      categories: state.categories,
+      habits: state.habits,
+      records: state.records,
+      dataMonth: state.dataMonth,
+      _syncUser: 'xiaoyuer',
+      _syncTime: Date.now()
     };
     
     const response = await fetch(`${JSONBIN_API}/b/${JSONBIN_BIN_ID}`, {
@@ -502,7 +500,7 @@ async function syncToCloud(){
         'Content-Type': 'application/json',
         'X-Master-Key': JSONBIN_API_KEY
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(businessData)
     });
     
     if(response.ok) {
@@ -516,7 +514,7 @@ async function syncToCloud(){
     }
   } catch(e) {
     console.error('❌ 上传错误:', e.message);
-    updateSyncStatus('error', '✗ 同步失败');
+    updateSyncStatus('error', '✗ 网络错误');
   }
 }
 
@@ -533,46 +531,44 @@ async function syncFromCloud(){
     }
     
     const result = await response.json();
-    const cloudData = result.record?.data?.data;
-    if(!cloudData) {
+    const cloud = result.record;
+    if(!cloud) {
       console.log('📭 云端无数据');
       return false;
     }
     
-    const cloudTime = new Date(result.record.data.timestamp).getTime();
-    const localTime = (parseFloat(localStorage.getItem('harmony_last_sync') || '0')) || 0;
+    // 云端没有业务数据标记
+    if(!cloud._syncUser) {
+      console.log('📭 云端数据格式不匹配，跳过');
+      return false;
+    }
     
-    // 云端数据更新才拉取
+    // 时间戳对比：云端比本地新才拉取
+    const cloudTime = cloud._syncTime || 0;
+    const localTime = parseFloat(localStorage.getItem('harmony_last_sync') || '0');
+    
     if(cloudTime <= localTime) {
       console.log('⏭️ 本地数据已是最新');
       return false;
     }
     
-    console.log('📥 云端数据更新，加载中...');
+    console.log('📥 云端数据更新，加载中... cloud:', cloudTime, 'local:', localTime);
     
-    const currentWeeks = state.weeks;
-    state.currentWeek = cloudData.currentWeek || 0;
-    state.categories = cloudData.categories || state.categories;
-    state.habits = cloudData.habits || state.habits;
-    state.records = cloudData.records || {};
-    state.dataMonth = cloudData.dataMonth || state.dataMonth;
+    // 直接从 record 读取业务数据
+    state.currentWeek = cloud.currentWeek || state.currentWeek;
+    state.categories = cloud.categories || state.categories;
+    state.habits = cloud.habits || state.habits;
+    state.records = cloud.records || state.records;
+    state.dataMonth = cloud.dataMonth || state.dataMonth;
     
-    // 修复 weeks 中的 Date 对象
-    if (cloudData.weeks && cloudData.weeks.length > 0) {
-      state.weeks = cloudData.weeks.map(w => ({
-        ...w,
-        start: new Date(w.start),
-        end: new Date(w.end)
-      }));
-    } else {
-      state.weeks = currentWeeks;
-    }
+    // 重建 weeks（确保 Date 对象正确）
+    buildWeeks();
     
     saveUserData();
     loadHomeData();
-    localStorage.setItem('harmony_last_sync', cloudTime.toString());
+    
     console.log('✅ 云端数据已加载');
-    showToast('✓ 数据已同步');
+    showToast('✓ 已同步云端数据');
     return true;
     
   } catch(e) {
