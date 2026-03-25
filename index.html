@@ -493,6 +493,15 @@ function loadUserData(){
   if(saved) {
     const data = JSON.parse(saved);
     state = data;
+    
+    // 修复 weeks 中的 Date 对象（JSON 序列化后变成字符串）
+    if (state.weeks && state.weeks.length > 0) {
+      state.weeks = state.weeks.map(w => ({
+        ...w,
+        start: new Date(w.start),
+        end: new Date(w.end)
+      }));
+    }
   } else {
     // 新用户，初始化空数据
     state.records = {};
@@ -581,8 +590,15 @@ async function syncFromCloud(){
         // 加载云端数据
         state = data.record.data;
         
-        // 恢复 weeks 数据（云端可能没有）
-        if (!state.weeks || state.weeks.length === 0) {
+        // 修复 weeks 中的 Date 对象
+        if (state.weeks && state.weeks.length > 0) {
+          state.weeks = state.weeks.map(w => ({
+            ...w,
+            start: new Date(w.start),
+            end: new Date(w.end)
+          }));
+        } else {
+          // 恢复 weeks 数据（云端可能没有）
           state.weeks = currentWeeks;
         }
         
