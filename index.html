@@ -48,16 +48,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .screen{display:none;flex:1;flex-direction:column;overflow-y:auto;padding-bottom:70px;}
 .screen.active{display:flex;}
 
-/* user selector */
-.user-selector{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;}
-.user-selector.show{display:flex;}
-.user-selector-modal{background:#fff;border-radius:20px;padding:30px;width:320px;text-align:center;}
-.user-selector-modal h2{font-size:18px;font-weight:600;color:var(--brown);margin-bottom:20px;}
-.user-buttons{display:flex;flex-direction:column;gap:12px;}
-.user-btn{padding:16px;border-radius:12px;border:2px solid var(--border);background:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;}
-.user-btn:hover{background:var(--bg2);border-color:var(--coral);}
-.user-btn.active{background:var(--coral);color:#fff;border-color:var(--coral);}
-
 /* header */
 .hdr-coral{background:var(--coral);padding:44px 18px 16px;flex-shrink:0;display:flex;justify-content:space-between;align-items:flex-start;}
 .hdr-left{flex:1;}
@@ -198,17 +188,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <body>
 <div class="phone" id="app">
 
-<!-- USER SELECTOR -->
-<div class="user-selector" id="user-selector">
-  <div class="user-selector-modal">
-    <h2>选择用户</h2>
-    <div class="user-buttons">
-      <button class="user-btn" onclick="selectUser('xiaoyuer')">🐠 小鱼儿</button>
-      <button class="user-btn" onclick="selectUser('xiaoxingxing')">⭐ 小星星</button>
-    </div>
-  </div>
-</div>
-
 <!-- SYNC STATUS -->
 <div class="sync-status" id="sync-status">📱 在线</div>
 
@@ -221,8 +200,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="sub">Hello，今天你变好了么？</div>
     </div>
     <div class="user-info">
-      <div class="name" id="current-user">小鱼儿</div>
-      <div class="switch" onclick="showUserSelector()">切换用户</div>
+      <div class="name">🐟 小鱼儿</div>
     </div>
   </div>
   <div class="week-strip" id="week-strip"></div>
@@ -332,8 +310,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </div>
       </div>
       <div class="set-child">
-        <span class="set-child-name" id="settings-user">小鱼儿</span>
-        <button class="ic-btn" onclick="showUserSelector()">切换</button>
+        <span class="set-child-name">🐟 小鱼儿</span>
       </div>
     </div>
     <div class="set-group">
@@ -400,17 +377,55 @@ const JSONBIN_BIN_ID = '69c2b4f1b7ec241ddc9bc630';
 const JSONBIN_API_KEY = '$2a$10$ucgutK6AlkVIxe7BXKDmquTIgmZS7Cea0eSFJy1Ct56pBdzSUW/Oy';
 
 // 用户配置
-const USERS = {
-  'xiaoyuer': { name: '小鱼儿', emoji: '🐠' },
-  'xiaoxingxing': { name: '小星星', emoji: '⭐' }
-};
+// ===== 用户数据管理 (单账号) =====
+const STORAGE_KEY = 'harmony_health_data';
 
-// 云端存储键名
-function getCloudKey(userId) {
-  return `harmony_health_${userId}`;
+function loadUserData(){
+  console.log('📂 加载用户数据');
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if(saved) {
+    const data = JSON.parse(saved);
+    state = {
+      currentWeek: data.currentWeek || 0,
+      weeks: data.weeks || [],
+      categories: data.categories || state.categories,
+      habits: data.habits || state.habits,
+      records: data.records || {},
+      modalAction: null,
+      modalTarget: null,
+      dataMonth: data.dataMonth || {y: new Date().getFullYear(), m: new Date().getMonth()+1},
+      bmiChart: null,
+      healthCharts: []
+    };
+
+    // 修复 weeks 中的 Date 对象
+    if (state.weeks && state.weeks.length > 0) {
+      state.weeks = state.weeks.map(w => ({
+        ...w,
+        start: new Date(w.start),
+        end: new Date(w.end)
+      }));
+    }
+  }
+
+  if (!state.weeks || state.weeks.length === 0) {
+    buildWeeks();
+  }
+
+  loadHomeData();
 }
 
-let currentUser = null;
+function saveUserData(){
+  const dataToSave = {
+    currentWeek: state.currentWeek,
+    weeks: state.weeks,
+    categories: state.categories,
+    habits: state.habits,
+    records: state.records,
+    dataMonth: state.dataMonth
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+}
 
 let state={
   currentWeek:4,
@@ -461,127 +476,21 @@ function rec(){
   return state.records[weekKey];
 }
 
-// 用户管理
-function showUserSelector(){
-  document.getElementById('user-selector').classList.add('show');
-}
-
-function selectUser(userId){
-  console.log('🔄 切换用户:', userId);
-  
-  // 保存当前用户
-  currentUser = userId;
-  localStorage.setItem('harmony_current_user', userId);
-  
-  // 隐藏用户选择器
-  document.getElementById('user-selector').classList.remove('show');
-  
-  // 更新 UI
-  const userName = USERS[userId].name;
-  document.getElementById('current-user').textContent = userName;
-  document.getElementById('settings-user').textContent = userName;
-  
-  showToast(`✓ 已切换到 ${userName}`);
-  
-  // 延迟 500ms 后刷新页面，确保 UI 更新完成
-  setTimeout(() => {
-    console.log('🔄 刷新页面以加载新用户数据');
-    location.reload();
-  }, 500);
-}
-
-function loadUserData(){
-  console.log('📂 加载用户数据:', currentUser);
-  
-  const key = `harmony_data_${currentUser}`;
-  const saved = localStorage.getItem(key);
-  
-  if(saved) {
-    console.log('✅ 找到已保存的用户数据');
-    const data = JSON.parse(saved);
-    
-    // 完全替换 state（确保账户隔离）
-    state = {
-      currentWeek: data.currentWeek || 0,
-      weeks: data.weeks || [],
-      categories: data.categories || state.categories,
-      habits: data.habits || state.habits,
-      records: data.records || {},
-      modalAction: null,
-      modalTarget: null,
-      dataMonth: data.dataMonth || {y: new Date().getFullYear(), m: new Date().getMonth()+1},
-      bmiChart: null,
-      healthCharts: []
-    };
-    
-    // 修复 weeks 中的 Date 对象（JSON 序列化后变成字符串）
-    if (state.weeks && state.weeks.length > 0) {
-      state.weeks = state.weeks.map(w => ({
-        ...w,
-        start: new Date(w.start),
-        end: new Date(w.end)
-      }));
-    }
-  } else {
-    console.log('📝 新用户，初始化数据');
-    // 新用户，初始化空数据
-    state.records = {};
-    state.currentWeek = 0;
-  }
-  
-  // 确保 weeks 数据完整
-  if (!state.weeks || state.weeks.length === 0) {
-    console.log('🔨 重建周数据');
-    buildWeeks();
-  }
-  
-  console.log('✅ 用户数据加载完成:', {user: currentUser, weeks: state.weeks.length, records: Object.keys(state.records).length});
-  
-  loadHomeData();
-}
-
-function saveUserData(){
-  if(!currentUser) {
-    console.warn('⚠️ 保存失败: 未选择用户');
-    return;
-  }
-  
-  const key = `harmony_data_${currentUser}`;
-  const dataToSave = {
-    currentWeek: state.currentWeek,
-    weeks: state.weeks,
-    categories: state.categories,
-    habits: state.habits,
-    records: state.records,
-    dataMonth: state.dataMonth
-  };
-  
-  localStorage.setItem(key, JSON.stringify(dataToSave));
-  console.log('💾 用户数据已保存:', {user: currentUser, key: key});
-}
-
 // 云端同步函数
 async function syncToCloud(){
-  if(!currentUser) {
-    console.log('❌ 同步失败: 未选择用户');
-    return;
-  }
-  
-  console.log('🔄 开始同步, 用户:', currentUser);
-  console.log('📊 同步数据:', JSON.stringify(state).substring(0, 100) + '...');
+  console.log('🔄 开始同步');
+  console.log('📊 数据量:', JSON.stringify(state).length, 'bytes');
   
   updateSyncStatus('syncing', '🔄 同步中...');
   try {
     const url = `${JSONBIN_API}/b/${JSONBIN_BIN_ID}`;
     const payload = {
-      user: currentUser,
-      userName: USERS[currentUser].name,
+      user: 'xiaoyuer',
       data: state,
       timestamp: new Date().toISOString()
     };
     
     console.log('📤 请求 URL:', url);
-    console.log('📤 请求头:', { 'Content-Type': 'application/json', 'X-Master-Key': '***' });
     
     const response = await fetch(url, {
       method: 'PUT',
@@ -611,11 +520,7 @@ async function syncToCloud(){
 }
 
 async function syncFromCloud(){
-  if(!currentUser) {
-    console.log('❌ 同步失败: 未选择用户');
-    return;
-  }
-  
+  console.log('📥 从云端拉取数据...');
   try {
     const response = await fetch(`${JSONBIN_API}/b/${JSONBIN_BIN_ID}/latest`, {
       headers: {
@@ -626,19 +531,12 @@ async function syncFromCloud(){
     if(response.ok) {
       const data = await response.json();
       if(data.record && data.record.data) {
-        // 只同步当前用户的数据
-        if(data.record.data.user !== currentUser) {
-          console.log('⚠️ 云端数据属于其他用户，跳过同步');
-          return;
-        }
+        const cloudData = data.record.data.data;
+        if(!cloudData) return;
         
-        console.log('📥 从云端加载数据:', currentUser);
-        
-        // 保存当前的 weeks 数据
+        console.log('📥 加载云端数据');
         const currentWeeks = state.weeks;
         
-        // 加载云端数据
-        const cloudData = data.record.data.data;
         state = {
           currentWeek: cloudData.currentWeek || 0,
           weeks: cloudData.weeks || [],
@@ -652,7 +550,6 @@ async function syncFromCloud(){
           healthCharts: []
         };
         
-        // 修复 weeks 中的 Date 对象
         if (state.weeks && state.weeks.length > 0) {
           state.weeks = state.weeks.map(w => ({
             ...w,
@@ -660,7 +557,6 @@ async function syncFromCloud(){
             end: new Date(w.end)
           }));
         } else {
-          // 恢复 weeks 数据（云端可能没有）
           state.weeks = currentWeeks;
         }
         
@@ -1220,19 +1116,10 @@ function showToast(msg){
 
 // INIT
 function init(){
-  console.log('🚀 应用初始化中...');
+  console.log('🚀 应用初始化...');
   
-  // 检查是否有已保存的用户
-  const saved = localStorage.getItem('harmony_current_user');
-  if(saved && USERS[saved]) {
-    console.log('✅ 恢复上次用户:', saved);
-    currentUser = saved;
-    loadUserData();
-  } else {
-    console.log('📋 显示用户选择器');
-    showUserSelector();
-    return; // 等待用户选择
-  }
+  // 加载数据
+  loadUserData();
   
   // 初始化 UI
   buildWeeks();
@@ -1241,11 +1128,11 @@ function init(){
   
   console.log('✅ 应用初始化完成');
   
-  // 检查网络连接
+  // 网络监听
   window.addEventListener('online', () => {
     console.log('✅ 网络已连接');
     updateSyncStatus('online', '📱 在线');
-    if(currentUser) syncToCloud();
+    syncToCloud();
   });
   
   window.addEventListener('offline', () => {
@@ -1253,13 +1140,13 @@ function init(){
     updateSyncStatus('error', '📵 离线');
   });
   
-  // 定时自动同步
+  // 定时自动同步 (每 5 分钟)
   setInterval(() => {
-    if(currentUser && navigator.onLine) {
-      console.log('⏰ 定时同步触发');
-      syncToCloud();
-    }
-  }, 300000); // 每 5 分钟同步一次
+    if(navigator.onLine) syncToCloud();
+  }, 300000);
+  
+  // 启动时同步一次
+  if(navigator.onLine) syncToCloud();
 }
 
 init();
