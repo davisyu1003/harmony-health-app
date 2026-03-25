@@ -478,6 +478,12 @@ function selectUser(userId){
   
   // 加载用户数据
   loadUserData();
+  
+  // 重新构建周数据（确保数据完整）
+  buildWeeks();
+  renderWeekStrip();
+  updateMonthLabel();
+  
   showToast(`✓ 已切换到 ${userName}`);
 }
 
@@ -487,7 +493,17 @@ function loadUserData(){
   if(saved) {
     const data = JSON.parse(saved);
     state = data;
+  } else {
+    // 新用户，初始化空数据
+    state.records = {};
+    state.currentWeek = 0;
   }
+  
+  // 确保 weeks 数据完整
+  if (!state.weeks || state.weeks.length === 0) {
+    buildWeeks();
+  }
+  
   loadHomeData();
 }
 
@@ -559,7 +575,17 @@ async function syncFromCloud(){
     if(response.ok) {
       const data = await response.json();
       if(data.record && data.record.data) {
+        // 保存当前的 weeks 数据
+        const currentWeeks = state.weeks;
+        
+        // 加载云端数据
         state = data.record.data;
+        
+        // 恢复 weeks 数据（云端可能没有）
+        if (!state.weeks || state.weeks.length === 0) {
+          state.weeks = currentWeeks;
+        }
+        
         saveUserData();
         loadHomeData();
         showToast('✓ 数据已同步');
