@@ -210,7 +210,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <!-- SYNC STATUS -->
-<div class="sync-status" id="sync-status">📱 离线</div>
+<div class="sync-status" id="sync-status">📱 在线</div>
 
 <!-- HOME -->
 <div class="screen active" id="s-home">
@@ -504,23 +504,31 @@ async function syncToCloud(){
   }
   
   console.log('🔄 开始同步, 用户:', currentUser);
-  console.log('📊 同步数据:', JSON.stringify(state));
+  console.log('📊 同步数据:', JSON.stringify(state).substring(0, 100) + '...');
   
   updateSyncStatus('syncing', '🔄 同步中...');
   try {
-    const response = await fetch(`${JSONBIN_API}/b/${JSONBIN_BIN_ID}`, {
+    const url = `${JSONBIN_API}/b/${JSONBIN_BIN_ID}`;
+    const payload = {
+      user: currentUser,
+      userName: USERS[currentUser].name,
+      data: state,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('📤 请求 URL:', url);
+    console.log('📤 请求头:', { 'Content-Type': 'application/json', 'X-Master-Key': '***' });
+    
+    const response = await fetch(url, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'X-Master-Key': JSONBIN_API_KEY
       },
-      body: JSON.stringify({
-        user: currentUser,
-        userName: USERS[currentUser].name,
-        data: state,
-        timestamp: new Date().toISOString()
-      })
+      body: JSON.stringify(payload)
     });
+    
+    console.log('📥 响应状态:', response.status, response.statusText);
     
     if(response.ok) {
       const result = await response.json();
@@ -533,7 +541,7 @@ async function syncToCloud(){
       updateSyncStatus('error', '✗ 同步失败');
     }
   } catch(e) {
-    console.error('❌ 同步错误:', e);
+    console.error('❌ 同步错误:', e.message, e.stack);
     updateSyncStatus('error', '✗ 同步失败');
   }
 }
@@ -1119,9 +1127,21 @@ function init(){
   renderWeekStrip();
   updateMonthLabel();
   
+  // 检查网络连接
+  window.addEventListener('online', () => {
+    console.log('✅ 网络已连接');
+    updateSyncStatus('online', '📱 在线');
+    if(currentUser) syncToCloud();
+  });
+  
+  window.addEventListener('offline', () => {
+    console.log('❌ 网络已断开');
+    updateSyncStatus('error', '📵 离线');
+  });
+  
   // 定时自动同步
   setInterval(() => {
-    if(currentUser) {
+    if(currentUser && navigator.onLine) {
       syncToCloud();
     }
   }, 300000); // 每 5 分钟同步一次
