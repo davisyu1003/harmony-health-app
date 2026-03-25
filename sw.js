@@ -42,8 +42,12 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // PUT/POST 请求不缓存，直接网络请求
+  if (request.method === 'PUT' || request.method === 'POST') {
+    event.respondWith(fetch(request));
+  }
   // API 请求使用网络优先策略
-  if (url.origin.includes('jsonbin.io')) {
+  else if (url.origin.includes('jsonbin.io')) {
     event.respondWith(networkFirst(request));
   } 
   // 静态资源使用缓存优先策略
@@ -74,7 +78,7 @@ async function cacheFirst(request) {
 async function networkFirst(request) {
   try {
     const response = await fetch(request);
-    if (response.ok) {
+    if (response.ok && request.method === 'GET') {
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, response.clone());
     }
