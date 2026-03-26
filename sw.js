@@ -1,5 +1,5 @@
 // Service Worker for 小鱼健康 PWA
-const CACHE_VERSION = 'v10';
+const CACHE_VERSION = 'v11';
 const STATIC_CACHE = `harmony-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `harmony-dynamic-${CACHE_VERSION}`;
 
